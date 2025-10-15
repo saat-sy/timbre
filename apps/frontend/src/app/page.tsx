@@ -35,7 +35,7 @@ export default function HomePage() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16 animate-fade-in-up animation-delay-400">
-              <Link href="/register">
+              <Link href="/auth/register">
                 <GradientButton 
                   variant="primary" 
                   size="lg" 
@@ -47,14 +47,14 @@ export default function HomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                 </GradientButton>
               </Link>
-              <Link href="/waitlist">
+              <Link href="/auth/login">
                 <GradientButton 
                   variant="ghost" 
                   size="lg" 
                   className="w-full sm:w-auto group"
                 >
                   <span className="group-hover:scale-105 transition-transform duration-200">
-                    Join Waitlist
+                    Sign In
                   </span>
                 </GradientButton>
               </Link>
@@ -253,14 +253,11 @@ export default function HomePage() {
               </p>
             </div>
             <div className="flex space-x-6">
-              <Link href="/login" className="text-gray-400 hover:text-white transition-colors">
+              <Link href="/auth/login" className="text-gray-400 hover:text-white transition-colors">
                 Sign In
               </Link>
-              <Link href="/register" className="text-gray-400 hover:text-white transition-colors">
+              <Link href="/auth/register" className="text-gray-400 hover:text-white transition-colors">
                 Get Started
-              </Link>
-              <Link href="/waitlist" className="text-gray-400 hover:text-white transition-colors">
-                Waitlist
               </Link>
             </div>
           </div>

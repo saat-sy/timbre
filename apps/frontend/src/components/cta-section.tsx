@@ -33,7 +33,7 @@ export function CTASection() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <Link href="/register">
+              <Link href="/auth/register">
                 <GradientButton 
                   variant="primary" 
                   size="lg" 
@@ -44,14 +44,14 @@ export function CTASection() {
                 </GradientButton>
               </Link>
               
-              <Link href="/waitlist">
+              <Link href="/auth/login">
                 <GradientButton 
                   variant="ghost" 
                   size="lg" 
                   className="w-full sm:w-auto group"
                 >
                   <span className="group-hover:scale-105 transition-transform duration-200">
-                    Join Waitlist
+                    Sign In
                   </span>
                 </GradientButton>
               </Link>
