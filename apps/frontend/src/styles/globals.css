@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --accent-primary: #6366f1;
+    --accent-secondary: #8b5cf6;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  .liquid-glass-hover {
+    transition: all 0.3s ease;
+  }
+
+  .liquid-glass-hover:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .gradient-text {
+    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .gradient-button {
+    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease-in-out infinite;
+  }
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
