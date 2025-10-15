@@ -1,7 +1,9 @@
+import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
+
 export default function HomePage() {
   return (
     <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <div className="liquid-glass p-8 max-w-md mx-auto text-center">
+      <LiquidGlassCard variant="primary" className="p-8 max-w-md mx-auto text-center">
         <h1 className="text-4xl font-bold gradient-text mb-4">
           Timbre
         </h1>
@@ -16,7 +18,7 @@ export default function HomePage() {
             Join Waitlist
           </button>
         </div>
-      </div>
+      </LiquidGlassCard>
     </main>
   )
 }
