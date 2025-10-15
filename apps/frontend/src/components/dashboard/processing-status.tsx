@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
 import { GradientButton } from "@repo/ui/gradient-button";
-import { processingService } from "../../lib/processing-service";
-import { ProcessingJob, ProcessingQueue } from "../../lib/processing-types";
+import { processingService, ProcessingJob, ProcessingQueue } from "../../lib/processing";
 
 interface ProcessingStatusProps {
   className?: string;

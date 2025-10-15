@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../lib/auth-context';
-import { withAuth } from '../../lib/auth-middleware';
+import { useAuth, withConfirmedAuth } from '../../lib/auth';
 import { DashboardLayout } from '../../components/dashboard/dashboard-layout';
 import { VideoUploadInterface } from '../../components/dashboard/video-upload-interface';
 import { ProcessingStatus } from '../../components/dashboard/processing-status';
 import { ResultsDisplay } from '../../components/dashboard/results-display';
-import { processingService } from '../../lib/processing-service';
+import { processingService } from '../../lib/processing';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 
 function DashboardPage() {
@@ -108,4 +107,4 @@ function DashboardPage() {
   );
 }
 
-export default withAuth(DashboardPage);
+export default withConfirmedAuth(DashboardPage);

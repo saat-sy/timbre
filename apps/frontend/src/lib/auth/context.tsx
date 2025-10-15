@@ -1,30 +1,28 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { User, AuthState, dummyAuth } from './auth';
+import { User, AuthState, AuthError } from './types';
+import { amplifyAuth } from './amplify-auth';
 
-// Action types for auth reducer
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'LOGIN_SUCCESS'; payload: User }
   | { type: 'LOGOUT' };
 
-// Auth context interface
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, confirmPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-// Initial state
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: true, // Start with loading true to check localStorage
+  isLoading: true,
+  isConfirmed: false,
 };
 
-// Auth reducer
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'SET_LOADING':
@@ -37,6 +35,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         user: action.payload,
         isAuthenticated: !!action.payload,
+        isConfirmed: action.payload?.confirmationStatus === 'CONFIRMED',
         isLoading: false,
       };
     case 'LOGIN_SUCCESS':
@@ -44,6 +43,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         user: action.payload,
         isAuthenticated: true,
+        isConfirmed: action.payload.confirmationStatus === 'CONFIRMED',
         isLoading: false,
       };
     case 'LOGOUT':
@@ -51,6 +51,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         user: null,
         isAuthenticated: false,
+        isConfirmed: false,
         isLoading: false,
       };
     default:
@@ -58,56 +59,74 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   }
 };
 
-// Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth provider component
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check for existing authentication on mount
   useEffect(() => {
-    const checkExistingAuth = () => {
-      const user = dummyAuth.checkAuth();
-      dispatch({ type: 'SET_USER', payload: user });
+    const checkExistingAuth = async () => {
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Auth check timeout')), 10000); // 10 second timeout
+        });
+
+        const user = await Promise.race([
+          amplifyAuth.getCurrentUser(),
+          timeoutPromise
+        ]);
+        
+        dispatch({ type: 'SET_USER', payload: user });
+      } catch (error) {
+        console.error('Error checking existing auth:', error);
+        dispatch({ type: 'SET_USER', payload: null });
+      }
     };
 
     checkExistingAuth();
   }, []);
 
-  // Login function
   const login = async (email: string, password: string): Promise<void> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const user = await dummyAuth.login(email, password);
+      const user = await amplifyAuth.login(email, password);
       dispatch({ type: 'LOGIN_SUCCESS', payload: user });
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      throw error;
+      // Re-throw AuthError or wrap unknown errors
+      if (error instanceof AuthError) {
+        throw error;
+      }
+      throw new AuthError('Login failed. Please try again.');
     }
   };
 
-  // Register function
   const register = async (email: string, password: string, confirmPassword: string): Promise<void> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const user = await dummyAuth.register(email, password, confirmPassword);
+      const user = await amplifyAuth.register(email, password);
       dispatch({ type: 'LOGIN_SUCCESS', payload: user });
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      throw error;
+      if (error instanceof AuthError) {
+        throw error;
+      }
+      throw new AuthError('Registration failed. Please try again.');
     }
   };
 
-  // Logout function
   const logout = async (): Promise<void> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await dummyAuth.logout();
+      await amplifyAuth.logout();
       dispatch({ type: 'LOGOUT' });
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      throw error;
+      if (error instanceof AuthError) {
+        throw error;
+      }
+      throw new AuthError('Logout failed. Please try again.');
     }
   };
 
@@ -121,7 +140,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Custom hook to use auth context
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

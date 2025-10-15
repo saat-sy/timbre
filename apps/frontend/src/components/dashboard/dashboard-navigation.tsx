@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "../../lib/auth-context";
+import { useAuth } from "../../lib/auth";
 import { GradientButton } from "@repo/ui/gradient-button";
 import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
 import Link from "next/link";

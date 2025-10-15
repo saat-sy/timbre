@@ -1,6 +1,6 @@
 'use client';
 
-import { withAuth } from '../../../lib/auth-middleware';
+import { withConfirmedAuth } from '../../../lib/auth';
 import { DashboardLayout } from '../../../components/dashboard/dashboard-layout';
 import { HistoryManager } from '../../../components/dashboard/history-manager';
 
@@ -25,4 +25,4 @@ function HistoryPage() {
   );
 }
 
-export default withAuth(HistoryPage);
+export default withConfirmedAuth(HistoryPage);

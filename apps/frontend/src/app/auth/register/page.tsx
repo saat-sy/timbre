@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '../../../lib/auth-context';
-import { validateEmail, validatePassword, validatePasswordMatch } from '../../../lib/auth';
+import { useAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
@@ -27,7 +26,6 @@ export default function RegisterPage() {
       [name]: value,
     }));
     
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -74,9 +72,16 @@ export default function RegisterPage() {
       await register(formData.email, formData.password, formData.confirmPassword);
       router.push('/dashboard');
     } catch (error) {
-      setErrors({
-        general: 'Registration failed. Please try again.',
-      });
+      // Handle Amplify-specific errors with user-friendly messages
+      if (error instanceof AuthError) {
+        setErrors({
+          general: error.message,
+        });
+      } else {
+        setErrors({
+          general: 'Registration failed. Please try again.',
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +119,7 @@ export default function RegisterPage() {
               className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
                 errors.email ? 'border-red-500/50' : 'border-white/10'
               } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
-              placeholder="Enter your email"
+              placeholder="your@email.com"
               disabled={isSubmitting}
             />
             {errors.email && (
@@ -136,7 +141,7 @@ export default function RegisterPage() {
               className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
                 errors.password ? 'border-red-500/50' : 'border-white/10'
               } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
-              placeholder="Create a password"
+              placeholder="Password"
               disabled={isSubmitting}
             />
             {errors.password && (
@@ -158,7 +163,7 @@ export default function RegisterPage() {
               className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
                 errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'
               } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
-              placeholder="Confirm your password"
+              placeholder="Re-enter your password"
               disabled={isSubmitting}
             />
             {errors.confirmPassword && (
@@ -200,17 +205,7 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      {/* Demo Notice */}
-      <LiquidGlassCard variant="secondary" className="p-4">
-        <div className="text-center">
-          <p className="text-sm text-gray-400 mb-2">
-            <span className="text-yellow-400">Demo Mode:</span> Any valid email format will work
-          </p>
-          <p className="text-xs text-gray-500">
-            Try: demo@example.com / password123 / password123
-          </p>
-        </div>
-      </LiquidGlassCard>
+
     </div>
   );
 }

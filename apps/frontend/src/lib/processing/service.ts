@@ -1,4 +1,4 @@
-import { ProcessingJob, ProcessingQueue, ProcessingResult, ProcessingError } from './processing-types';
+import { ProcessingJob, ProcessingQueue, ProcessingResult, ProcessingError } from './types';
 
 class ProcessingService {
   private jobs: Map<string, ProcessingJob> = new Map();
