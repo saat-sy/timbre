@@ -60,6 +60,11 @@ export function Navigation() {
         
         {/* Desktop CTA Buttons */}
         <div className="hidden md:flex items-center space-x-4">
+          <Link href="/waitlist">
+            <GradientButton variant="ghost" size="sm">
+              Join Waitlist
+            </GradientButton>
+          </Link>
           <Link href="/login">
             <GradientButton variant="ghost" size="sm">
               Sign In
@@ -113,6 +118,11 @@ export function Navigation() {
             How It Works
           </button>
           <div className="pt-4 border-t border-white/10 space-y-3">
+            <Link href="/waitlist" className="block">
+              <GradientButton variant="ghost" size="sm" className="w-full">
+                Join Waitlist
+              </GradientButton>
+            </Link>
             <Link href="/login" className="block">
               <GradientButton variant="ghost" size="sm" className="w-full">
                 Sign In

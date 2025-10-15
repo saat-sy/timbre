@@ -7,6 +7,8 @@ export interface LiquidGlassCardProps {
   variant?: 'primary' | 'secondary' | 'accent';
   blur?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   as?: 'div' | 'section' | 'article';
 }
 
@@ -28,6 +30,8 @@ export function LiquidGlassCard({
   variant = 'primary',
   blur = 'md',
   onClick,
+  onMouseEnter,
+  onMouseLeave,
   as: Component = 'div',
 }: LiquidGlassCardProps): JSX.Element {
   const baseStyles = variant === 'primary' || variant === 'secondary' || variant === 'accent' 
@@ -46,6 +50,8 @@ export function LiquidGlassCard({
     <Component 
       className={combinedClassName}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {children}
     </Component>
