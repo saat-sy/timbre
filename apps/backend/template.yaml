@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  timbre-backend
+
+  Backend for Timbre app.
+
+Globals:
+  Function:
+    Timeout: 3
+
+    LoggingConfig:
+      LogFormat: JSON
+
+Resources:
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: timbre-user-pool
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+        - Name: given_name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: family_name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: timbre-web-client
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+
+Outputs:
+  UserPoolId:
+    Description: "The ID of the Cognito User Pool"
+    Value: !Ref CognitoUserPool
+
+  UserPoolClientId:
+    Description: "The ID of the Cognito User Pool Client"
+    Value: !Ref CognitoUserPoolClient
