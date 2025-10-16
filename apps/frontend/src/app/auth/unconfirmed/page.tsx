@@ -4,22 +4,24 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../../lib/auth';
+import { amplifyAuth } from '../../../lib/auth/amplify-auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
 export default function UnconfirmedPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState<string>('');
-  
-  const { logout, user } = useAuth();
+
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     setError('');
-    
+
     try {
-      await logout();
+      await amplifyAuth.logout();
+      await refreshUser();
       router.push('/auth/login');
     } catch (error) {
       setError('Logout failed. Please try again.');
@@ -42,17 +44,17 @@ export default function UnconfirmedPage() {
           {/* Status Icon */}
           <div className="flex justify-center">
             <div className="w-16 h-16 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center">
-              <svg 
-                className="w-8 h-8 text-yellow-400" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-8 h-8 text-yellow-400"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>
@@ -64,7 +66,7 @@ export default function UnconfirmedPage() {
               Welcome, {user?.email}!
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              Your account has been created successfully, but it's currently pending confirmation. 
+              Your account has been created successfully, but it's currently pending confirmation.
               Our team will review and confirm your account manually.
             </p>
           </div>
@@ -113,17 +115,17 @@ export default function UnconfirmedPage() {
       <div className="text-center space-y-4">
         <p className="text-gray-400">
           Need help?{' '}
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
             Contact Support
           </Link>
         </p>
-        
+
         <p className="text-gray-400">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-gray-300 hover:text-white transition-colors"
           >
             ← Back to Home

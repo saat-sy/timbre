@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { useAuth } from "../../lib/auth";
+import { amplifyAuth } from "../../lib/auth/amplify-auth";
 import { GradientButton } from "@repo/ui/gradient-button";
 import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
 import Link from "next/link";
 
 export function DashboardNavigation() {
-  const { user, logout } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await amplifyAuth.logout();
+      await refreshUser(); // Refresh the auth state after logout
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -27,16 +29,16 @@ export function DashboardNavigation() {
             Timbre
           </Link>
         </div>
-        
+
         {/* Navigation Links */}
         <div className="hidden md:flex items-center space-x-8">
-          <Link 
+          <Link
             href="/dashboard"
             className="text-gray-300 hover:text-white transition-colors hover:scale-105 transform duration-200"
           >
             Dashboard
           </Link>
-          <Link 
+          <Link
             href="/dashboard/history"
             className="text-gray-300 hover:text-white transition-colors hover:scale-105 transform duration-200"
           >
@@ -46,7 +48,7 @@ export function DashboardNavigation() {
             Settings
           </button>
         </div>
-        
+
         {/* User Menu */}
         <div className="relative">
           <button
@@ -59,10 +61,10 @@ export function DashboardNavigation() {
             <span className="hidden md:block text-sm">
               {user?.name || user?.email?.split('@')[0]}
             </span>
-            <svg 
+            <svg
               className={`w-4 h-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`}
-              fill="none" 
-              stroke="currentColor" 
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -101,7 +103,7 @@ export function DashboardNavigation() {
 
                 {/* Logout Button */}
                 <div className="border-t border-white/10 pt-3">
-                  <GradientButton 
+                  <GradientButton
                     onClick={handleLogout}
                     variant="secondary"
                     size="sm"
@@ -118,8 +120,8 @@ export function DashboardNavigation() {
 
       {/* Click outside to close menu */}
       {isUserMenuOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setIsUserMenuOpen(false)}
         />
       )}
