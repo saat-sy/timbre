@@ -1,4 +1,4 @@
-import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { User, AuthError } from './types';
 
 function mapAmplifyError(error: any): AuthError {
@@ -13,13 +13,13 @@ function mapAmplifyError(error: any): AuthError {
       return new AuthError('Invalid email or password.', errorCode, error);
 
     case 'UserNotConfirmedException':
-      return new AuthError('Your account is not confirmed. Please verify your email address.', errorCode, error);
+      return new AuthError('Your account is not confirmed. Please wait for manual approval.', errorCode, error);
 
     case 'CodeMismatchException':
-      return new AuthError('Invalid verification code. Please check and try again.', errorCode, error);
+      return new AuthError('Invalid code. Please check and try again.', errorCode, error);
 
     case 'ExpiredCodeException':
-      return new AuthError('Verification code has expired. Please request a new one.', errorCode, error);
+      return new AuthError('Code has expired. Please request a new one.', errorCode, error);
 
     case 'UsernameExistsException':
       return new AuthError('An account with this email already exists.', errorCode, error);
@@ -47,7 +47,7 @@ function mapAmplifyError(error: any): AuthError {
 
 /**
  * Checks user confirmation status from Amplify user attributes
- * For manual confirmation workflow: email verification != user confirmation
+ * For manual confirmation workflow: user confirmation is done manually
  */
 export function checkUserConfirmationStatus(user: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
   if (!user) return 'UNCONFIRMED';
@@ -225,32 +225,5 @@ export const amplifyAuth = {
     }
   },
 
-  /**
-   * Confirms user email with verification code
-   */
-  confirmEmail: async (email: string, code: string): Promise<void> => {
-    try {
-      await confirmSignUp({
-        username: email,
-        confirmationCode: code,
-      });
-    } catch (error: any) {
-      console.error('Email confirmation error:', error);
-      throw mapAmplifyError(error);
-    }
-  },
 
-  /**
-   * Resends email verification code
-   */
-  resendVerificationCode: async (email: string): Promise<void> => {
-    try {
-      await resendSignUpCode({
-        username: email,
-      });
-    } catch (error: any) {
-      console.error('Resend verification code error:', error);
-      throw mapAmplifyError(error);
-    }
-  },
 };

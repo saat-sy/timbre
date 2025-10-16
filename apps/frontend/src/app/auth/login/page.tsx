@@ -21,9 +21,9 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if user was redirected after email verification
-    if (searchParams.get('verified') === 'true') {
-      setSuccessMessage('Email verified successfully! You can now sign in.');
+    // Check for any success messages from URL params
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Account created successfully! You can now sign in.');
     }
   }, [searchParams]);
 
@@ -77,9 +77,8 @@ export default function LoginPage() {
     } catch (error) {
       if (error instanceof AuthError) {
         if (error.code === 'UserNotConfirmedException') {
-          // Store email for verification page and redirect
-          localStorage.setItem('pendingVerificationEmail', formData.email);
-          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
+          // Redirect to unconfirmed page
+          router.push('/auth/unconfirmed');
           return;
         }
         setErrors({

@@ -79,8 +79,7 @@ export default function RegisterPage() {
 
     try {
       await amplifyAuth.register(formData.email, formData.password, formData.firstName, formData.lastName);
-      localStorage.setItem('pendingVerificationEmail', formData.email);
-      router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
+      router.push('/auth/unconfirmed');
     } catch (error) {
       if (error instanceof AuthError) {
         setErrors({
