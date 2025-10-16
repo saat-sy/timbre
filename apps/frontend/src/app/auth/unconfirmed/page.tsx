@@ -66,7 +66,7 @@ export default function UnconfirmedPage() {
               Welcome, {user?.email}!
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              Your account has been created successfully! Your account is now pending manual confirmation.
+              Your email has been verified successfully! Your account is now pending manual confirmation.
               Our team will review and approve your account.
             </p>
           </div>
@@ -77,7 +77,7 @@ export default function UnconfirmedPage() {
             <ul className="text-gray-300 text-sm space-y-2">
               <li className="flex items-start">
                 <span className="text-green-400 mr-2">✓</span>
-                Account created successfully
+                Email verified successfully
               </li>
               <li className="flex items-start">
                 <span className="text-blue-400 mr-2">•</span>
@@ -141,7 +141,7 @@ export default function UnconfirmedPage() {
       <LiquidGlassCard variant="secondary" className="p-4">
         <div className="text-center">
           <p className="text-sm text-gray-400 mb-2">
-            <span className="text-green-400">Account:</span> Created ✓ | <span className="text-blue-400">Status:</span> Pending Manual Approval
+            <span className="text-green-400">Email:</span> Verified ✓ | <span className="text-blue-400">Account:</span> Pending Manual Approval
           </p>
           <p className="text-xs text-gray-500">
             Account approval typically takes 1-2 business days
