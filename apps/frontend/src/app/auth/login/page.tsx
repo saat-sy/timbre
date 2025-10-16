@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, amplifyAuth, validateEmail, validatePassword, AuthError } from '../../../lib/auth';
+import { useAuth, amplifyAuth, validateEmail, validatePassword, AuthError, useRedirectIfAuthenticated } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
@@ -19,6 +19,18 @@ export default function LoginPage() {
   const { refreshUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isLoading } = useRedirectIfAuthenticated();
+
+  // Show loading while checking auth status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="liquid-glass p-8 rounded-2xl">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     // Check if user was redirected after email verification
@@ -71,9 +83,15 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await amplifyAuth.login(formData.email, formData.password);
+      const user = await amplifyAuth.login(formData.email, formData.password);
       await refreshUser();
-      router.push('/dashboard');
+      
+      // Check custom:status attribute to determine where to redirect
+      if (user.confirmationStatus === 'CONFIRMED') {
+        router.push('/dashboard');
+      } else {
+        router.push('/auth/unconfirmed');
+      }
     } catch (error) {
       if (error instanceof AuthError) {
         if (error.code === 'UserNotConfirmedException') {

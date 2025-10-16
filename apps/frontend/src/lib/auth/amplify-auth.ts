@@ -1,4 +1,4 @@
-import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode, fetchUserAttributes } from 'aws-amplify/auth';
 import { User, AuthError } from './types';
 
 function mapAmplifyError(error: any): AuthError {
@@ -46,27 +46,19 @@ function mapAmplifyError(error: any): AuthError {
 }
 
 /**
- * Checks user confirmation status from Amplify user attributes
- * For manual confirmation workflow: email verification != user confirmation
+ * Checks user confirmation status from user attributes
+ * Now checks custom:status attribute for manual approval workflow
  */
-export function checkUserConfirmationStatus(user: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
+function checkUserConfirmationStatus(user: any, userAttributes: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
   if (!user) return 'UNCONFIRMED';
-  console.log('User confirmation status debug:', {
-    challengeName: user.challengeName,
-    emailVerified: user.attributes?.email_verified,
-    userStatus: user.userStatus,
-    attributesUserStatus: user.attributes?.user_status,
-    allAttributes: user.attributes,
-    fullUser: user
-  });
 
   if (user.challengeName === 'NEW_PASSWORD_REQUIRED') {
     return 'FORCE_CHANGE_PASSWORD';
   }
 
-  const userStatus = user.userStatus || user.attributes?.user_status;
+  const customStatus = userAttributes['custom:status'];
 
-  if (userStatus === 'CONFIRMED') {
+  if (customStatus === 'true') {
     return 'CONFIRMED';
   }
 
@@ -76,22 +68,32 @@ export function checkUserConfirmationStatus(user: any): 'CONFIRMED' | 'UNCONFIRM
 /**
  * Transforms Amplify user object to our User interface
  */
-function transformAmplifyUser(amplifyUser: any): User {
-  const confirmationStatus = checkUserConfirmationStatus(amplifyUser);
+async function transformAmplifyUser(amplifyUser: any): Promise<User> {
+  // Fetch user attributes once and use for both confirmation status and user data
+  let userAttributes = amplifyUser.attributes || {};
+  try {
+    const fetchedAttributes = await fetchUserAttributes();
+    userAttributes = { ...userAttributes, ...fetchedAttributes };
+  } catch (error) {
+    // Fallback to user object attributes if fetch fails
+  }
+
+  // Check confirmation status using the fetched attributes
+  const confirmationStatus = checkUserConfirmationStatus(amplifyUser, userAttributes);
 
   // Construct full name from given_name and family_name, or fallback to name attribute
-  const firstName = amplifyUser.attributes?.given_name || '';
-  const lastName = amplifyUser.attributes?.family_name || '';
+  const firstName = userAttributes.given_name || '';
+  const lastName = userAttributes.family_name || '';
   const fullName = [firstName, lastName].filter(Boolean).join(' ') ||
-    amplifyUser.attributes?.name ||
-    amplifyUser.attributes?.email?.split('@')[0] || '';
+    userAttributes.name ||
+    userAttributes.email?.split('@')[0] || '';
 
   return {
     id: amplifyUser.userId || amplifyUser.username,
-    email: amplifyUser.attributes?.email || amplifyUser.signInDetails?.loginId || '',
+    email: userAttributes.email || amplifyUser.signInDetails?.loginId || '',
     name: fullName,
-    createdAt: amplifyUser.attributes?.created_at
-      ? new Date(amplifyUser.attributes.created_at)
+    createdAt: userAttributes.created_at
+      ? new Date(userAttributes.created_at)
       : new Date(),
     confirmationStatus
   };
@@ -117,7 +119,7 @@ export const amplifyAuth = {
 
       // Get the current user after successful sign in
       const currentUser = await getCurrentUser();
-      return transformAmplifyUser(currentUser);
+      return await transformAmplifyUser(currentUser);
 
     } catch (error: any) {
       console.error('Login error:', error);
@@ -134,9 +136,10 @@ export const amplifyAuth = {
         email: email,
         given_name: firstName?.trim() || 'User',
         family_name: lastName?.trim() || 'Name',
+        'custom:status': 'false',
       };
 
-      const { userId, nextStep } = await signUp({
+      const { userId } = await signUp({
         username: email,
         password: password,
         options: {
@@ -156,7 +159,7 @@ export const amplifyAuth = {
         confirmationStatus: 'UNCONFIRMED'
       };
 
-      console.log('Sign up next step:', nextStep);
+
 
       return newUser;
 
@@ -211,7 +214,7 @@ export const amplifyAuth = {
         timeoutPromise
       ]);
 
-      return transformAmplifyUser(currentUser);
+      return await transformAmplifyUser(currentUser);
 
     } catch (error: any) {
       if (error.name === 'UserUnAuthenticatedException' ||

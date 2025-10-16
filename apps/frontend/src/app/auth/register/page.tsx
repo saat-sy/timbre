@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { amplifyAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError } from '../../../lib/auth';
+import { amplifyAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError, useRedirectIfAuthenticated } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
@@ -19,6 +19,18 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const router = useRouter();
+  const { isLoading } = useRedirectIfAuthenticated();
+
+  // Show loading while checking auth status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="liquid-glass p-8 rounded-2xl">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      </div>
+    );
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

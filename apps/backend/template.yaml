@@ -30,6 +30,16 @@ Resources:
           AttributeDataType: String
           Mutable: true
           Required: true
+        - Name: status
+          AttributeDataType: Boolean
+          Mutable: true
+          Required: false
+      AutoVerifiedAttributes:
+        - email
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailMessage: 'Your verification code for Timbre is {####}'
+        EmailSubject: 'Your verification code for Timbre'
       Policies:
         PasswordPolicy:
           MinimumLength: 8

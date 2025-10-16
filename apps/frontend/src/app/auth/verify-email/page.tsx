@@ -59,16 +59,14 @@ export default function VerifyEmailPage() {
         confirmationCode: verificationCode.trim(),
       });
 
-      setSuccess('Email verified successfully! Redirecting...');
+      setSuccess('Email verified successfully! Redirecting to login...');
       
       // Clear stored email
       localStorage.removeItem('pendingVerificationEmail');
       
-      // Refresh user state and redirect to unconfirmed page for manual approval
-      await refreshUser();
-      
+      // Redirect to login page with verification success flag
       setTimeout(() => {
-        router.push('/auth/unconfirmed');
+        router.push('/auth/login?verified=true');
       }, 2000);
 
     } catch (error: any) {
