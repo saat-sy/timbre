@@ -10,10 +10,12 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-amplify/auth": "^6.16.0",
+    "@repo/ui": "workspace:*",
+    "aws-amplify": "^6.15.7",
     "next": "^14.2.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@repo/ui": "workspace:*"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
