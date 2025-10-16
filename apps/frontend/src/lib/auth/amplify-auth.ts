@@ -41,18 +41,26 @@ function mapAmplifyError(error: any): AuthError {
 
 /**
  * Checks user confirmation status from Amplify user attributes
+ * For manual confirmation workflow: email verification != user confirmation
  */
 export function checkUserConfirmationStatus(user: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
   if (!user) return 'UNCONFIRMED';
+  console.log('User confirmation status debug:', {
+    challengeName: user.challengeName,
+    emailVerified: user.attributes?.email_verified,
+    userStatus: user.userStatus,
+    attributesUserStatus: user.attributes?.user_status,
+    allAttributes: user.attributes,
+    fullUser: user
+  });
 
   if (user.challengeName === 'NEW_PASSWORD_REQUIRED') {
     return 'FORCE_CHANGE_PASSWORD';
   }
 
-  const emailVerified = user.attributes?.email_verified;
   const userStatus = user.userStatus || user.attributes?.user_status;
 
-  if (emailVerified === true || userStatus === 'CONFIRMED') {
+  if (userStatus === 'CONFIRMED') {
     return 'CONFIRMED';
   }
 

@@ -31,6 +31,8 @@ Resources:
           Mutable: true
           Required: true
       AutoVerifiedAttributes: [email]
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
       Policies:
         PasswordPolicy:
           MinimumLength: 8
