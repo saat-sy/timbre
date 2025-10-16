@@ -30,6 +30,7 @@ Resources:
           AttributeDataType: String
           Mutable: true
           Required: true
+      AutoVerifiedAttributes: [email]
       Policies:
         PasswordPolicy:
           MinimumLength: 8
