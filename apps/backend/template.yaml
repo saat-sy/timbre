@@ -30,11 +30,6 @@ Resources:
           AttributeDataType: String
           Mutable: true
           Required: true
-        - Name: status
-          AttributeDataType: Boolean
-          Mutable: true
-          Required: false
-      AutoVerifiedAttributes: [email]
       Policies:
         PasswordPolicy:
           MinimumLength: 8
