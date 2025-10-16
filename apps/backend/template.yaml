@@ -30,9 +30,11 @@ Resources:
           AttributeDataType: String
           Mutable: true
           Required: true
+        - Name: status
+          AttributeDataType: Boolean
+          Mutable: true
+          Required: false
       AutoVerifiedAttributes: [email]
-      AdminCreateUserConfig:
-        AllowAdminCreateUserOnly: false
       Policies:
         PasswordPolicy:
           MinimumLength: 8
