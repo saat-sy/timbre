@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, amplifyAuth, validateEmail, validatePassword, AuthError } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
@@ -14,9 +14,18 @@ export default function LoginPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   const { refreshUser } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check if user was redirected after email verification
+    if (searchParams.get('verified') === 'true') {
+      setSuccessMessage('Email verified successfully! You can now sign in.');
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -68,7 +77,9 @@ export default function LoginPage() {
     } catch (error) {
       if (error instanceof AuthError) {
         if (error.code === 'UserNotConfirmedException') {
-          router.push('/auth/unconfirmed');
+          // Store email for verification page and redirect
+          localStorage.setItem('pendingVerificationEmail', formData.email);
+          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
           return;
         }
         setErrors({
@@ -95,6 +106,13 @@ export default function LoginPage() {
       {/* Login Form */}
       <LiquidGlassCard className="p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Success Message */}
+          {successMessage && (
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+              {successMessage}
+            </div>
+          )}
+
           {/* General Error */}
           {errors.general && (
             <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">

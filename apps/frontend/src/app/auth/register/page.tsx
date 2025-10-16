@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, amplifyAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError } from '../../../lib/auth';
+import { amplifyAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
@@ -17,8 +17,7 @@ export default function RegisterPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const { refreshUser } = useAuth();
+
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,7 +26,7 @@ export default function RegisterPage() {
       ...prev,
       [name]: value,
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -71,19 +70,18 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       await amplifyAuth.register(formData.email, formData.password, formData.firstName, formData.lastName);
-      await refreshUser(); // Refresh user state after registration
-      router.push('/dashboard');
+      localStorage.setItem('pendingVerificationEmail', formData.email);
+      router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
-      // Handle Amplify-specific errors with user-friendly messages
       if (error instanceof AuthError) {
         setErrors({
           general: error.message,
@@ -129,9 +127,8 @@ export default function RegisterPage() {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                  errors.firstName ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.firstName ? 'border-red-500/50' : 'border-white/10'
+                  } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
                 placeholder="First name"
                 disabled={isSubmitting}
               />
@@ -151,9 +148,8 @@ export default function RegisterPage() {
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                  errors.lastName ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.lastName ? 'border-red-500/50' : 'border-white/10'
+                  } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
                 placeholder="Last name"
                 disabled={isSubmitting}
               />
@@ -174,9 +170,8 @@ export default function RegisterPage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                errors.email ? 'border-red-500/50' : 'border-white/10'
-              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.email ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="your@email.com"
               disabled={isSubmitting}
             />
@@ -196,9 +191,8 @@ export default function RegisterPage() {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                errors.password ? 'border-red-500/50' : 'border-white/10'
-              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.password ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="Password"
               disabled={isSubmitting}
             />
@@ -218,9 +212,8 @@ export default function RegisterPage() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'
-              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="Re-enter your password"
               disabled={isSubmitting}
             />
@@ -245,17 +238,17 @@ export default function RegisterPage() {
       <div className="text-center space-y-4">
         <p className="text-gray-400">
           Already have an account?{' '}
-          <Link 
-            href="/auth/login" 
+          <Link
+            href="/auth/login"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
             Sign in
           </Link>
         </p>
-        
+
         <p className="text-gray-400">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-gray-300 hover:text-white transition-colors"
           >
             ← Back to Home

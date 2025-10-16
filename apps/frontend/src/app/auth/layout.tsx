@@ -14,18 +14,19 @@ export default function AuthLayout({
   const { isAuthenticated, isConfirmed, isLoading } = useAuth();
   const router = useRouter();
   const isUnconfirmedPage = pathname === '/auth/unconfirmed';
+  const isVerifyEmailPage = pathname === '/auth/verify-email';
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      if (!isConfirmed && !isUnconfirmedPage) {
-        // Redirect unconfirmed users to unconfirmed page (except if already there)
+      if (!isConfirmed && !isUnconfirmedPage && !isVerifyEmailPage) {
+        // Redirect unconfirmed users to unconfirmed page (except if already there or on verify page)
         router.push('/auth/unconfirmed');
       } else if (isConfirmed && (pathname === '/auth/login' || pathname === '/auth/register')) {
         // Redirect confirmed users away from login/register pages
         router.push('/dashboard');
       }
     }
-  }, [isAuthenticated, isConfirmed, isLoading, pathname, isUnconfirmedPage, router]);
+  }, [isAuthenticated, isConfirmed, isLoading, pathname, isUnconfirmedPage, isVerifyEmailPage, router]);
 
   // Show loading state while checking authentication
   if (isLoading) {

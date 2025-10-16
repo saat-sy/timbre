@@ -66,8 +66,8 @@ export default function UnconfirmedPage() {
               Welcome, {user?.email}!
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              Your account has been created successfully, but it's currently pending confirmation.
-              Our team will review and confirm your account manually.
+              Your email has been verified successfully! Your account is now pending manual confirmation.
+              Our team will review and approve your account.
             </p>
           </div>
 
@@ -76,16 +76,20 @@ export default function UnconfirmedPage() {
             <h3 className="text-blue-400 font-medium mb-2">What happens next?</h3>
             <ul className="text-gray-300 text-sm space-y-2">
               <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                Our team will review your account registration
+                <span className="text-green-400 mr-2">✓</span>
+                Email verified successfully
               </li>
               <li className="flex items-start">
                 <span className="text-blue-400 mr-2">•</span>
-                You'll receive an email notification once your account is confirmed
+                Our team will review and approve your account
               </li>
               <li className="flex items-start">
                 <span className="text-blue-400 mr-2">•</span>
-                After confirmation, you'll have full access to all features
+                You'll receive an email notification once approved
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-400 mr-2">•</span>
+                After approval, you'll have full access to all features
               </li>
             </ul>
           </div>
@@ -137,10 +141,10 @@ export default function UnconfirmedPage() {
       <LiquidGlassCard variant="secondary" className="p-4">
         <div className="text-center">
           <p className="text-sm text-gray-400 mb-2">
-            <span className="text-blue-400">Account Status:</span> Pending Manual Confirmation
+            <span className="text-green-400">Email:</span> Verified ✓ | <span className="text-blue-400">Account:</span> Pending Manual Approval
           </p>
           <p className="text-xs text-gray-500">
-            This process typically takes 1-2 business days
+            Account approval typically takes 1-2 business days
           </p>
         </div>
       </LiquidGlassCard>

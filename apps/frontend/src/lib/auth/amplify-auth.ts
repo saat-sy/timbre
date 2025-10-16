@@ -1,4 +1,4 @@
-import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
 import { User, AuthError } from './types';
 
 function mapAmplifyError(error: any): AuthError {
@@ -13,7 +13,13 @@ function mapAmplifyError(error: any): AuthError {
       return new AuthError('Invalid email or password.', errorCode, error);
 
     case 'UserNotConfirmedException':
-      return new AuthError('Your account is not confirmed. Please check your email for confirmation instructions.', errorCode, error);
+      return new AuthError('Your account is not confirmed. Please verify your email address.', errorCode, error);
+
+    case 'CodeMismatchException':
+      return new AuthError('Invalid verification code. Please check and try again.', errorCode, error);
+
+    case 'ExpiredCodeException':
+      return new AuthError('Verification code has expired. Please request a new one.', errorCode, error);
 
     case 'UsernameExistsException':
       return new AuthError('An account with this email already exists.', errorCode, error);
@@ -215,6 +221,35 @@ export const amplifyAuth = {
       }
 
       console.error('Get current user error:', error);
+      throw mapAmplifyError(error);
+    }
+  },
+
+  /**
+   * Confirms user email with verification code
+   */
+  confirmEmail: async (email: string, code: string): Promise<void> => {
+    try {
+      await confirmSignUp({
+        username: email,
+        confirmationCode: code,
+      });
+    } catch (error: any) {
+      console.error('Email confirmation error:', error);
+      throw mapAmplifyError(error);
+    }
+  },
+
+  /**
+   * Resends email verification code
+   */
+  resendVerificationCode: async (email: string): Promise<void> => {
+    try {
+      await resendSignUpCode({
+        username: email,
+      });
+    } catch (error: any) {
+      console.error('Resend verification code error:', error);
       throw mapAmplifyError(error);
     }
   },
