@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, validateEmail, validatePassword, AuthError } from '../../../lib/auth';
+import { useAuth, amplifyAuth, validateEmail, validatePassword, AuthError } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login } = useAuth();
+  const { refreshUser } = useAuth();
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +63,8 @@ export default function LoginPage() {
     setIsSubmitting(true);
     
     try {
-      await login(formData.email, formData.password);
+      await amplifyAuth.login(formData.email, formData.password);
+      await refreshUser(); // Refresh user state after login
       router.push('/dashboard');
     } catch (error) {
       if (error instanceof AuthError) {
@@ -175,8 +176,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-
-
     </div>
   );
 }

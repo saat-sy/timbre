@@ -22,7 +22,7 @@ function mapAmplifyError(error: any): AuthError {
       return new AuthError('Password does not meet requirements.', errorCode, error);
 
     case 'InvalidParameterException':
-      return new AuthError('Invalid email format or missing required fields.', errorCode, error);
+      return new AuthError(`Invalid parameters`, errorCode, error);
 
     case 'TooManyRequestsException':
       return new AuthError('Too many requests. Please try again later.', errorCode, error);
@@ -65,10 +65,17 @@ export function checkUserConfirmationStatus(user: any): 'CONFIRMED' | 'UNCONFIRM
 function transformAmplifyUser(amplifyUser: any): User {
   const confirmationStatus = checkUserConfirmationStatus(amplifyUser);
 
+  // Construct full name from given_name and family_name, or fallback to name attribute
+  const firstName = amplifyUser.attributes?.given_name || '';
+  const lastName = amplifyUser.attributes?.family_name || '';
+  const fullName = [firstName, lastName].filter(Boolean).join(' ') ||
+    amplifyUser.attributes?.name ||
+    amplifyUser.attributes?.email?.split('@')[0] || '';
+
   return {
     id: amplifyUser.userId || amplifyUser.username,
     email: amplifyUser.attributes?.email || amplifyUser.signInDetails?.loginId || '',
-    name: amplifyUser.attributes?.name || amplifyUser.attributes?.given_name,
+    name: fullName,
     createdAt: amplifyUser.attributes?.created_at
       ? new Date(amplifyUser.attributes.created_at)
       : new Date(),
@@ -105,34 +112,49 @@ export const amplifyAuth = {
   },
 
   /**
-   * Registers a new user with email and password
+   * Registers a new user with email, password, and optional first/last name
    */
-  register: async (email: string, password: string): Promise<User> => {
+  register: async (email: string, password: string, firstName?: string, lastName?: string): Promise<User> => {
     try {
-      const { userId } = await signUp({
+      const userAttributes: Record<string, string> = {
+        email: email,
+        given_name: firstName?.trim() || 'User',
+        family_name: lastName?.trim() || 'Name',
+      };
+
+      const { userId, nextStep } = await signUp({
         username: email,
         password: password,
         options: {
-          userAttributes: {
-            email: email,
-          },
+          userAttributes,
         },
       });
 
-      // Create user object for newly registered user
-      // Note: New users will be UNCONFIRMED until manually confirmed
+      const fullName = [firstName?.trim(), lastName?.trim()]
+        .filter(Boolean)
+        .join(' ') || email.split('@')[0];
+
       const newUser: User = {
         id: userId || `user_${Date.now()}`,
         email: email,
-        name: email.split('@')[0], // Use email prefix as default name
+        name: fullName,
         createdAt: new Date(),
         confirmationStatus: 'UNCONFIRMED'
       };
+
+      console.log('Sign up next step:', nextStep);
 
       return newUser;
 
     } catch (error: any) {
       console.error('Registration error:', error);
+      console.error('Error details:', {
+        name: error.name,
+        code: error.code,
+        message: error.message,
+        email,
+        passwordLength: password.length
+      });
       throw mapAmplifyError(error);
     }
   },
@@ -164,7 +186,7 @@ export const amplifyAuth = {
         fetchAuthSession(),
         timeoutPromise
       ]);
-      
+
       if (!session.tokens) {
         return null;
       }
@@ -174,7 +196,7 @@ export const amplifyAuth = {
         getCurrentUser(),
         timeoutPromise
       ]);
-      
+
       return transformAmplifyUser(currentUser);
 
     } catch (error: any) {

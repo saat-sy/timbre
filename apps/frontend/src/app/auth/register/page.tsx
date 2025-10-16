@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError } from '../../../lib/auth';
+import { useAuth, amplifyAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError } from '../../../lib/auth';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -16,7 +18,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { register } = useAuth();
+  const { refreshUser } = useAuth();
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,6 +38,14 @@ export default function RegisterPage() {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
 
     if (!formData.email) {
       newErrors.email = 'Email is required';
@@ -69,7 +79,8 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     
     try {
-      await register(formData.email, formData.password, formData.confirmPassword);
+      await amplifyAuth.register(formData.email, formData.password, formData.firstName, formData.lastName);
+      await refreshUser(); // Refresh user state after registration
       router.push('/dashboard');
     } catch (error) {
       // Handle Amplify-specific errors with user-friendly messages
@@ -104,6 +115,53 @@ export default function RegisterPage() {
               {errors.general}
             </div>
           )}
+
+          {/* Name Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* First Name Field */}
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                  errors.firstName ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+                placeholder="First name"
+                disabled={isSubmitting}
+              />
+              {errors.firstName && (
+                <p className="mt-1 text-sm text-red-400">{errors.firstName}</p>
+              )}
+            </div>
+
+            {/* Last Name Field */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">
+                Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                  errors.lastName ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+                placeholder="Last name"
+                disabled={isSubmitting}
+              />
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-400">{errors.lastName}</p>
+              )}
+            </div>
+          </div>
 
           {/* Email Field */}
           <div>
@@ -204,8 +262,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-
-
     </div>
   );
 }
