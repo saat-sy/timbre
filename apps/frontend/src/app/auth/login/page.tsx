@@ -14,7 +14,7 @@ export default function LoginPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { refreshUser } = useAuth();
   const router = useRouter();
 
@@ -24,8 +24,7 @@ export default function LoginPage() {
       ...prev,
       [name]: value,
     }));
-    
-    // Clear error when user starts typing
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -55,19 +54,23 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       await amplifyAuth.login(formData.email, formData.password);
-      await refreshUser(); // Refresh user state after login
+      await refreshUser();
       router.push('/dashboard');
     } catch (error) {
       if (error instanceof AuthError) {
+        if (error.code === 'UserNotConfirmedException') {
+          router.push('/auth/unconfirmed');
+          return;
+        }
         setErrors({
           general: error.message,
         });
@@ -110,9 +113,8 @@ export default function LoginPage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                errors.email ? 'border-red-500/50' : 'border-white/10'
-              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.email ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="your@email.com"
               disabled={isSubmitting}
             />
@@ -132,9 +134,8 @@ export default function LoginPage() {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
-                errors.password ? 'border-red-500/50' : 'border-white/10'
-              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.password ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="Your password"
               disabled={isSubmitting}
             />
@@ -159,17 +160,17 @@ export default function LoginPage() {
       <div className="text-center space-y-4">
         <p className="text-gray-400">
           Don't have an account?{' '}
-          <Link 
-            href="/auth/register" 
+          <Link
+            href="/auth/register"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
             Sign up
           </Link>
         </p>
-        
+
         <p className="text-gray-400">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-gray-300 hover:text-white transition-colors"
           >
             ← Back to Home
