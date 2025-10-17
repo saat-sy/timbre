@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import { DashboardNavigation } from "./dashboard-navigation";
+import { DashboardSidebar } from "./dashboard-sidebar";
+import { DashboardProvider } from "./dashboard-context";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -9,14 +10,16 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      {/* Navigation */}
-      <DashboardNavigation />
-      
-      {/* Main Content */}
-      <main className="pt-20 pb-8">
-        {children}
-      </main>
-    </div>
+    <DashboardProvider>
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
+        {/* Sidebar */}
+        <DashboardSidebar />
+        
+        {/* Main Content */}
+        <main className="h-full pl-16 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </DashboardProvider>
   );
 }

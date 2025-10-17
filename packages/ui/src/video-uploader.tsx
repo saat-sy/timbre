@@ -200,9 +200,9 @@ export function VideoUploader({
           "relative liquid-glass-primary p-8 transition-all duration-300 ease-in-out",
           "border-2 border-dashed",
           isDragOver && !disabled && "border-indigo-400 bg-indigo-500/10 scale-[1.02]",
-          !isDragOver && "border-white/20 hover:border-white/30",
+          !isDragOver && "border-white/20 hover:border-white/40",
           disabled && "opacity-50 cursor-not-allowed",
-          !disabled && "cursor-pointer hover:bg-white/5",
+          !disabled && "cursor-pointer",
           selectedFile && "border-green-400/50 bg-green-500/5"
         )}
         onDragEnter={handleDragEnter}
