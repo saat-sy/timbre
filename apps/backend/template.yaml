@@ -55,6 +55,42 @@ Resources:
       UserPoolId: !Ref CognitoUserPool
       GenerateSecret: false
 
+  CreateUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/create_upload_url/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref UploadsBucket
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: post
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+
+  SubmitJobFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/submit_job/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /schedule_job
+            Method: post
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+
 Outputs:
   UserPoolId:
     Description: "The ID of the Cognito User Pool"
@@ -63,3 +99,11 @@ Outputs:
   UserPoolClientId:
     Description: "The ID of the Cognito User Pool Client"
     Value: !Ref CognitoUserPoolClient
+
+  ApiEndpoint:
+    Description: "API Gateway base endpoint URL"
+    Value: !Sub "https://*.execute-api.${AWS::Region}.amazonaws.com/Prod"
+    
+  UploadsBucketName:
+    Description: "Name of the S3 bucket for uploads"
+    Value: !Ref UploadsBucket
