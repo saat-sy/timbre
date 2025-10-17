@@ -55,10 +55,29 @@ Resources:
       UserPoolId: !Ref CognitoUserPool
       GenerateSecret: false
 
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [PUT, GET, HEAD]
+            AllowedOrigins: ['*']
+  
+  HttpApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: CognitoUserPoolAuthorizer
+        Authorizers:
+          CognitoUserPoolAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+
   CreateUploadUrlFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/lambdas/api/create_upload_url/
+      CodeUri: src/lambdas/create_upload_url/
       Handler: app.lambda_handler
       Runtime: python3.13
       Policies:
@@ -73,6 +92,7 @@ Resources:
           Properties:
             Path: /upload
             Method: post
+            RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
 
@@ -88,6 +108,7 @@ Resources:
           Properties:
             Path: /schedule_job
             Method: post
+            RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
 
@@ -103,7 +124,7 @@ Outputs:
   ApiEndpoint:
     Description: "API Gateway base endpoint URL"
     Value: !Sub "https://*.execute-api.${AWS::Region}.amazonaws.com/Prod"
-    
+
   UploadsBucketName:
     Description: "Name of the S3 bucket for uploads"
     Value: !Ref UploadsBucket
