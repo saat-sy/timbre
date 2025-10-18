@@ -171,14 +171,6 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.13
 
-  # Status Maintainer
-  StatusMaintainerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/lambdas/steps/status_maintainer/
-      Handler: app.lambda_handler
-      Runtime: python3.13
-
   # AV Operator
   AVOperatorFunction:
     Type: AWS::Serverless::Function
@@ -197,7 +189,6 @@ Resources:
         AnalyzerFunctionArn: !GetAtt AnalyzerFunction.Arn
         LibraryBrowserFunctionArn: !GetAtt LibraryBrowserFunction.Arn
         AudioGeneratorFunctionArn: !GetAtt AudioGeneratorFunction.Arn
-        StatusMaintainerFunctionArn: !GetAtt StatusMaintainerFunction.Arn
         AudioVideoOpsFunctionArn: !GetAtt AVOperatorFunction.Arn
 
     Policies:
@@ -207,7 +198,6 @@ Resources:
             - !Ref AnalyzerFunction
             - !Ref LibraryBrowserFunction
             - !Ref AudioGeneratorFunction
-            - !Ref StatusMaintainerFunction
             - !Ref AVOperatorFunction
 
 
