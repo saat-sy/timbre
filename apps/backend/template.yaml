@@ -97,7 +97,7 @@ Resources:
   CreateUploadUrlFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/lambdas/create_upload_url/
+      CodeUri: src/lambdas/api/create_upload_url/
       Handler: app.lambda_handler
       Runtime: python3.13
       Policies:
@@ -122,7 +122,7 @@ Resources:
   SubmitJobFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/lambdas/submit_job/
+      CodeUri: src/lambdas/api/submit_job/
       Handler: app.lambda_handler
       Runtime: python3.13
       Policies:
@@ -243,21 +243,23 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: src/state_machine/workflow.asl.json
-      Properties:
+      DefinitionSubstitutions:
         CoordinatorFunctionArn: !GetAtt CoordinatorFunction.Arn
         AnalyzerFunctionArn: !GetAtt AnalyzerFunction.Arn
         LibraryBrowserFunctionArn: !GetAtt LibraryBrowserFunction.Arn
         AudioGeneratorFunctionArn: !GetAtt AudioGeneratorFunction.Arn
         AudioVideoOpsFunctionArn: !GetAtt AVOperatorFunction.Arn
-
-    Policies:
-      - LambdaInvokePolicy:
-          FunctionNames:
-            - !Ref CoordinatorFunction
-            - !Ref AnalyzerFunction
-            - !Ref LibraryBrowserFunction
-            - !Ref AudioGeneratorFunction
-            - !Ref AVOperatorFunction
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CoordinatorFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AnalyzerFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref LibraryBrowserFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AudioGeneratorFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AVOperatorFunction
 
   SharedCodeLayer:
     Type: AWS::Serverless::LayerVersion
