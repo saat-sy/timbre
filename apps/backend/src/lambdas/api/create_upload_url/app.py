@@ -3,6 +3,8 @@ import json
 import boto3
 import uuid
 
+from models import UploadInfo, LambdaResponse, FailureResponse
+
 s3 = boto3.client('s3')
 BUCKET_NAME = os.environ['BUCKET_NAME']
 
@@ -24,13 +26,20 @@ def lambda_handler(event, _):
             ExpiresIn=3600
         )
 
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'upload_url': presigned_url,
-                's3_path': f"s3://{BUCKET_NAME}/{file_key}"
-            })
-        }
+        uploadInfo = UploadInfo(
+            upload_url=presigned_url,
+            s3_path=f"s3://{BUCKET_NAME}/{file_key}"
+        )
+
+        return LambdaResponse(
+            status_code=200,
+            body=uploadInfo.to_dict()
+        ).to_dict()
+    
     except Exception as e:
         print(f"Error: {e}")
-        return {'statusCode': 500, 'body': json.dumps({'message': 'Internal server error'})}
+        return FailureResponse(
+            error="InternalServerError",
+            error_code=500,
+            message="An internal error occurred while creating the upload URL."
+        ).to_dict()
