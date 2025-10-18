@@ -13,6 +13,8 @@ Globals:
       LogFormat: JSON
 
 Resources:
+
+  # --- Authentication ---
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -55,6 +57,7 @@ Resources:
       UserPoolId: !Ref CognitoUserPool
       GenerateSecret: false
 
+  # --- Storage ---
   UploadsBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -63,7 +66,23 @@ Resources:
           - AllowedHeaders: ['*']
             AllowedMethods: [PUT, GET, HEAD]
             AllowedOrigins: ['*']
-  
+
+  # --- Database ---
+
+  # DynamoDB Table for Jobs
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: timbre-jobs
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  # --- API Gateway Definition ---
   HttpApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -74,6 +93,7 @@ Resources:
           CognitoUserPoolAuthorizer:
             UserPoolArn: !GetAtt CognitoUserPool.Arn
 
+  # Endpoint 1: /upload - Create Upload URL
   CreateUploadUrlFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -96,12 +116,17 @@ Resources:
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
 
+  # Endpoint 2: /schedule_job - Submit Job
   SubmitJobFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/lambdas/submit_job/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref TimbreStateMachine
+          JOBS_TABLE: !Ref JobsTable
       Events:
         ApiEvent:
           Type: Api
@@ -111,6 +136,80 @@ Resources:
             RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
+
+  # Orchestration Lambda Functions
+
+  # Coordinator
+  CoordinatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/coordinator/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Analyzer
+  AnalyzerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/analyzer/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Library Browser
+  LibraryBrowserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/library_browser/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Audio Generator
+  AudioGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/audio_generator/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Status Maintainer
+  StatusMaintainerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/status_maintainer/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # AV Operator
+  AVOperatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/av_operator/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Orchestration
+  TimbreStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: src/state_machine/workflow.asl.json
+      Properties:
+        CoordinatorFunctionArn: !GetAtt CoordinatorFunction.Arn
+        AnalyzerFunctionArn: !GetAtt AnalyzerFunction.Arn
+        LibraryBrowserFunctionArn: !GetAtt LibraryBrowserFunction.Arn
+        AudioGeneratorFunctionArn: !GetAtt AudioGeneratorFunction.Arn
+        StatusMaintainerFunctionArn: !GetAtt StatusMaintainerFunction.Arn
+        AudioVideoOpsFunctionArn: !GetAtt AVOperatorFunction.Arn
+
+    Policies:
+      - LambdaInvokePolicy:
+          FunctionNames:
+            - !Ref CoordinatorFunction
+            - !Ref AnalyzerFunction
+            - !Ref LibraryBrowserFunction
+            - !Ref AudioGeneratorFunction
+            - !Ref StatusMaintainerFunction
+            - !Ref AVOperatorFunction
+
 
 Outputs:
   UserPoolId:
@@ -128,3 +227,7 @@ Outputs:
   UploadsBucketName:
     Description: "Name of the S3 bucket for uploads"
     Value: !Ref UploadsBucket
+
+  JobsTableName:
+    Description: "Name of the DynamoDB table for jobs"
+    Value: !Ref JobsTable
