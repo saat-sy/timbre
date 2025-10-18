@@ -106,6 +106,8 @@ Resources:
       Environment:
         Variables:
           BUCKET_NAME: !Ref UploadsBucket
+      Layers:
+        - !Ref SharedCodeLayer
       Events:
         ApiEvent:
           Type: Api
@@ -123,16 +125,73 @@ Resources:
       CodeUri: src/lambdas/submit_job/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt TimbreStateMachine.Name
       Environment:
         Variables:
           STATE_MACHINE_ARN: !Ref TimbreStateMachine
           JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
       Events:
         ApiEvent:
           Type: Api
           Properties:
             Path: /schedule_job
             Method: post
+            RestApiId: !Ref HttpApi
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+
+  # Endpoint 3: /get_job_status - Get Job Status
+  GetJobStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/get_job_status/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref JobsTable
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /get_job_status
+            Method: get
+            RestApiId: !Ref HttpApi
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+
+  # Endpoint 4: /get_user_jobs - Get User Jobs
+  GetUserJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/get_user_jobs/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref JobsTable
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /get_user_jobs
+            Method: get
             RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
@@ -199,6 +258,15 @@ Resources:
             - !Ref LibraryBrowserFunction
             - !Ref AudioGeneratorFunction
             - !Ref AVOperatorFunction
+
+  SharedCodeLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: timbre-shared-code
+      Description: Shared code for Timbre Lambda functions
+      ContentUri: src/layers/shared_code/
+      CompatibleRuntimes:
+        - python3.13
 
 
 Outputs:

@@ -6,6 +6,8 @@ import re
 from datetime import datetime, timezone
 from botocore.exceptions import ClientError
 
+from models import LambdaResponse, FailureResponse, Job
+
 STATE_MACHINE_ARN = os.environ['STATE_MACHINE_ARN']
 JOBS_TABLE = os.environ['JOBS_TABLE']
 
@@ -47,10 +49,12 @@ def lambda_handler(event, _):
 
         validation_errors = validate_inputs(prompt, s3_path, job_id)
         if validation_errors:
-            return {
-                'statusCode': 400, 
-                'body': json.dumps({'message': 'Validation errors', 'errors': validation_errors})
-            }
+            failure_response = FailureResponse(
+                error="ValidationError",
+                error_code=400,
+                message="Validation errors: " + "; ".join(validation_errors)
+            )
+            return failure_response.to_dict()
 
         current_timestamp = datetime.now(timezone.utc).isoformat()
 
@@ -83,17 +87,42 @@ def lambda_handler(event, _):
                     try:
                         response = jobs_table.get_item(Key={'job_id': job_id})
                         if 'Item' not in response:
-                            return {'statusCode': 404, 'body': json.dumps({'message': 'Job ID not found for regeneration. Please submit a new job.'})}
+                            failure_response = FailureResponse(
+                                error="NotFoundError",
+                                error_code=404,
+                                message="Job ID not found for regeneration. Please submit a new job."
+                            )
+                            return failure_response.to_dict()
                         else:
-                            return {'statusCode': 403, 'body': json.dumps({'message': 'Unauthorized access to job.'})}
+                            failure_response = FailureResponse(
+                                error="UnauthorizedError",
+                                error_code=403,
+                                message="Unauthorized access to job."
+                            )
+                            return failure_response.to_dict()
                     except Exception:
-                        return {'statusCode': 404, 'body': json.dumps({'message': 'Job ID not found for regeneration. Please submit a new job.'})}
+                        failure_response = FailureResponse(
+                            error="NotFoundError",
+                            error_code=404,
+                            message="Job ID not found for regeneration. Please submit a new job."
+                        )
+                        return failure_response.to_dict()
                 else:
                     print(f"Error updating job in DynamoDB: {e}")
-                    return {'statusCode': 500, 'body': json.dumps({'message': 'Error accessing job data.'})}
+                    failure_response = FailureResponse(
+                        error="DatabaseError",
+                        error_code=500,
+                        message="Error accessing job data."
+                    )
+                    return failure_response.to_dict()
             except Exception as e:
                 print(f"Error updating job in DynamoDB: {e}")
-                return {'statusCode': 500, 'body': json.dumps({'message': 'Error accessing job data.'})}
+                failure_response = FailureResponse(
+                    error="DatabaseError",
+                    error_code=500,
+                    message="Error accessing job data."
+                )
+                return failure_response.to_dict()
 
         else:
             # New job operation
@@ -101,27 +130,40 @@ def lambda_handler(event, _):
             job_id = str(uuid.uuid4())
 
             if not s3_path:
-                return {'statusCode': 400, 'body': json.dumps({'message': 'Missing s3_path for new job submission.'})}
+                failure_response = FailureResponse(
+                    error="ValidationError",
+                    error_code=400,
+                    message="Missing s3_path for new job submission."
+                )
+                return failure_response.to_dict()
         
             prompts = [prompt]
 
+            # Create Job object for new job
+            job = Job(
+                job_id=job_id,
+                user_id=user_id,
+                s3_path=s3_path,
+                prompts=prompts,
+                status='SCHEDULED',
+                operation_type=operation_type,
+                final_url='',
+                summary='',
+                created_at=current_timestamp,
+                updated_at=current_timestamp
+            )
+
             # Record new job in DynamoDB
             try:
-                jobs_table.put_item(
-                    Item={
-                        'job_id': job_id,
-                        'user_id': user_id,
-                        's3_path': s3_path,
-                        'prompts': prompts,
-                        'status': 'SCHEDULED',
-                        'operation_type': operation_type,
-                        'created_at': current_timestamp,
-                        'updated_at': current_timestamp
-                    }
-                )
+                jobs_table.put_item(Item=job.to_dict())
             except Exception as e:
                 print(f"Error writing job to DynamoDB: {e}")
-                return {'statusCode': 500, 'body': json.dumps({'message': 'Error recording job data.'})}
+                failure_response = FailureResponse(
+                    error="DatabaseError",
+                    error_code=500,
+                    message="Error recording job data."
+                )
+                return failure_response.to_dict()
         
         # Start Step Functions execution with unique name
         execution_name = f"{job_id}-{int(datetime.now(timezone.utc).timestamp() * 1000)}"
@@ -155,19 +197,32 @@ def lambda_handler(event, _):
             except Exception as rollback_error:
                 print(f"Error during rollback: {rollback_error}")
             
-            return {'statusCode': 500, 'body': json.dumps({'message': 'Error initiating job processing.'})}
+            failure_response = FailureResponse(
+                error="ExecutionError",
+                error_code=500,
+                message="Error initiating job processing."
+            )
+            return failure_response.to_dict()
 
-        return {
-            'statusCode': 202,
-            'body': json.dumps({
-                'message': 'Job accepted for processing.', 
-                'job_id': job_id,
-                'operation_type': operation_type
-            })
+        response_body = {
+            'message': 'Job accepted for processing.', 
+            'job_id': job_id,
+            'operation_type': operation_type
         }
+        return LambdaResponse(202, response_body).to_dict()
 
     except json.JSONDecodeError:
-        return {'statusCode': 400, 'body': json.dumps({'message': 'Invalid JSON in request body.'})}
+        failure_response = FailureResponse(
+            error="ValidationError",
+            error_code=400,
+            message="Invalid JSON in request body."
+        )
+        return failure_response.to_dict()
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return {'statusCode': 500, 'body': json.dumps({'message': 'Internal server error'})}
+        failure_response = FailureResponse(
+            error="InternalServerError",
+            error_code=500,
+            message="Internal server error"
+        )
+        return failure_response.to_dict()
