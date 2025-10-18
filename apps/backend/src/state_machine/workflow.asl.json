@@ -24,7 +24,7 @@
         {
           "Variable": "$.found_in_library",
           "BooleanEquals": true,
-          "Next": "RunStatusMaintainer" 
+          "Next": "RunAudioVideoOps" 
         }
       ],
       "Default": "RunGenerateAudio" 
@@ -32,7 +32,7 @@
 
     "RunGenerateAudio": {
       "Type": "Task",
-      "Resource": "${GenerateAudioFunctionArn}",
+      "Resource": "${AudioGeneratorFunctionArn}",
       "Next": "RunAudioVideoOps"
     },
     "RunAudioVideoOps": {
