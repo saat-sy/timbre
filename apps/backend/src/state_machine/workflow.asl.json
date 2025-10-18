@@ -33,11 +33,6 @@
     "RunGenerateAudio": {
       "Type": "Task",
       "Resource": "${GenerateAudioFunctionArn}",
-      "Next": "RunStatusMaintainer"
-    },
-    "RunStatusMaintainer": {
-      "Type": "Task",
-      "Resource": "${StatusMaintainerFunctionArn}",
       "Next": "RunAudioVideoOps"
     },
     "RunAudioVideoOps": {
