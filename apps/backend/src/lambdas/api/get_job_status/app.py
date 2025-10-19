@@ -25,6 +25,10 @@ def lambda_handler(event, _):
     Returns:
         dict: HTTP response with job details or error
     """
+    # Handle CORS preflight requests
+    if event.get('httpMethod') == 'OPTIONS':
+        return LambdaResponse(200, {}).to_dict()
+    
     user_id = event['requestContext']['authorizer']['claims'].get('sub')
     logger.info(f"Getting job status for user: {user_id}")
 

@@ -90,6 +90,7 @@ class ApiClient {
         body: file,
         headers: {
           'Content-Type': file.type || 'application/octet-stream',
+          'x-amz-server-side-encryption': 'AES256',
         },
       });
 

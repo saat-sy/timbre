@@ -22,6 +22,10 @@ def lambda_handler(event, _):
     Returns:
         dict: HTTP response with upload_url and s3_path
     """
+    # Handle CORS preflight requests
+    if event.get('httpMethod') == 'OPTIONS':
+        return LambdaResponse(200, {}).to_dict()
+    
     user_id = event['requestContext']['authorizer']['claims']['sub']
     logger.info(f"Creating upload URL for user: {user_id}")
 
@@ -34,7 +38,12 @@ def lambda_handler(event, _):
         file_key = f"uploads/{user_id}/{uuid.uuid4()}-{filename}"
         presigned_url = s3.generate_presigned_url(
             'put_object',
-            Params={'Bucket': BUCKET_NAME, 'Key': file_key, 'ContentType': body.get('contentType', 'application/octet-stream')},
+            Params={
+                'Bucket': BUCKET_NAME, 
+                'Key': file_key, 
+                'ContentType': body.get('contentType', 'application/octet-stream'),
+                'ServerSideEncryption': 'AES256'
+            },
             ExpiresIn=3600
         )
 

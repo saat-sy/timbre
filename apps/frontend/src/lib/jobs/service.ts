@@ -59,6 +59,7 @@ class JobService {
             try {
                 uploadResponse = await apiClient.createUploadUrl({
                     filename: file.name,
+                    contentType: file.type || 'application/octet-stream',
                 });
             } catch (error) {
                 if (error instanceof ApiException) {
