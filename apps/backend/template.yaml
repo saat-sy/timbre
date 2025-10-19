@@ -7,7 +7,7 @@ Description: >
 
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 30
 
     LoggingConfig:
       LogFormat: JSON
@@ -88,10 +88,14 @@ Resources:
     Properties:
       StageName: Prod
       Auth:
-        DefaultAuthorizer: CognitoUserPoolAuthorizer
         Authorizers:
           CognitoUserPoolAuthorizer:
             UserPoolArn: !GetAtt CognitoUserPool.Arn
+      Cors:
+        AllowMethods: "'POST, GET, PUT'"
+        AllowHeaders: "'Content-Type, Authorization'"
+        AllowOrigin: "'*'"
+        MaxAge: "'600'"
 
   # Endpoint 1: /upload - Create Upload URL
   CreateUploadUrlFunction:
@@ -203,6 +207,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/lambdas/steps/coordinator/
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
       Handler: app.lambda_handler
       Runtime: python3.13
 

@@ -4,7 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr
 
-from models import LambdaResponse, FailureResponse, Job
+from models import LambdaResponse, Job
 
 JOBS_TABLE = os.environ['JOBS_TABLE']
 
@@ -21,10 +21,12 @@ def lambda_handler(event, _):
         status_filter = query_params.get('status')
         
         if limit < 1 or limit > 100:
-            failure_response = FailureResponse(
-                error="ValidationError",
-                error_code=400,
-                message="Limit must be between 1 and 100"
+            failure_response = LambdaResponse(
+                status_code=400,
+                body={
+                    "error": "ValidationError",
+                    "message": "Limit must be between 1 and 100"
+                }
             )
             return failure_response.to_dict()
 
@@ -74,25 +76,31 @@ def lambda_handler(event, _):
         
     except ValueError as e:
         print(f"Validation error: {e}")
-        failure_response = FailureResponse(
-            error="ValidationError",
-            error_code=400,
-            message="Invalid query parameters"
+        failure_response = LambdaResponse(
+            status_code=400,
+            body={
+                "error": "ValidationError",
+                "message": "Invalid query parameters"
+            }
         )
         return failure_response.to_dict()
     except ClientError as e:
         print(f"DynamoDB error: {e}")
-        failure_response = FailureResponse(
-            error="DatabaseError",
-            error_code=500,
-            message="Database error"
+        failure_response = LambdaResponse(
+            status_code=500,
+            body={
+                "error": "DatabaseError",
+                "message": "Database error"
+            }
         )
         return failure_response.to_dict()
     except Exception as e:
         print(f"Error: {e}")
-        failure_response = FailureResponse(
-            error="InternalServerError",
-            error_code=500,
-            message="Internal server error"
+        failure_response = LambdaResponse(
+            status_code=500,
+            body={
+                "error": "InternalServerError",
+                "message": "Internal server error"
+            }
         )
         return failure_response.to_dict()

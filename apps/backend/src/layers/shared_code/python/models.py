@@ -16,23 +16,6 @@ class LambdaResponse:
         return json.dumps(self.to_dict())
     
 @dataclass
-class FailureResponse:
-    error: str
-    error_code: int
-    message: str = ""
-
-    def to_dict(self):
-        response = {
-            'error': self.error,
-            'statusCode': self.error_code,
-            'message': self.message
-        }
-        return response
-    
-    def to_json(self):
-        return json.dumps(self.to_dict())
-    
-@dataclass
 class Job:
     job_id: str
     user_id: str
