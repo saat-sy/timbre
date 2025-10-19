@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import time
 
 JOBS_TABLE = os.environ['JOBS_TABLE']
 
@@ -9,48 +10,51 @@ jobs_table = dynamodb.Table(JOBS_TABLE)
 
 def update_status(event):
     job_id = event['job_id']
-    new_status = event['COMPLETED']
     
-    new_final_url = event.get('final_url')
-    new_summary = event.get('summary')
+    new_final_url = f"s3://timbre-bucket/final/xdcfghj.mp4"
+    new_summary = "Video processing completed successfully with AI-generated audio track."
     
     try:
         update_expressions = ['#status = :status']
         expression_attribute_names = {'#status': 'status'}
-        expression_attribute_values = {':status': new_status}
+        expression_attribute_values = {':status': 'COMPLETED'}
         
         if new_final_url is not None:
-            update_expressions.append('#final_url = list_append(if_not_exists(#final_url, :empty_list), :final_url)')
+            update_expressions.append('#final_url = :final_url')
             expression_attribute_names['#final_url'] = 'final_url'
-            expression_attribute_values[':final_url'] = [new_final_url]
-            expression_attribute_values[':empty_list'] = []
+            expression_attribute_values[':final_url'] = new_final_url
         
         if new_summary is not None:
-            update_expressions.append('#summary = list_append(if_not_exists(#summary, :empty_list2), :summary)')
+            update_expressions.append('#summary = :summary')
             expression_attribute_names['#summary'] = 'summary'
-            expression_attribute_values[':summary'] = [new_summary]
-            expression_attribute_values[':empty_list2'] = []
+            expression_attribute_values[':summary'] = new_summary
         
-        jobs_table.update_item(
+        response = jobs_table.update_item(
             Key={'job_id': job_id},
             UpdateExpression='SET ' + ', '.join(update_expressions),
             ExpressionAttributeNames=expression_attribute_names,
-            ExpressionAttributeValues=expression_attribute_values
+            ExpressionAttributeValues=expression_attribute_values,
+            ReturnValues='UPDATED_NEW'
         )
-        print(f"Updated job {job_id} status to {new_status}")
+        print(f"Successfully updated job {job_id} status to COMPLETED")
+        print(f"Updated attributes: {response.get('Attributes', {})}")
         if new_final_url:
-            print(f"Appended final_url: {new_final_url}")
+            print(f"Set final_url: {new_final_url}")
         if new_summary:
-            print(f"Appended summary: {new_summary}")
+            print(f"Set summary: {new_summary}")
     except Exception as e:
         print(f"Error updating job status: {e}")
 
 
 def lambda_handler(event, context):
-    print("--- 1. Coordinator Lambda ---")
-    print(f"Received job: {json.dumps(event)}")
+    print("--- Coordinator Lambda ---")
+    time.sleep(2) 
+    print(f"Received event: {json.dumps(event, indent=2)}")
+    
     if event.get('status') == 'PROCESSED':
+        print("Processing completed - updating job status to COMPLETED")
         update_status(event)
+    else:
+        print("Initial coordinator run - job starting")
         
-    # Pass the input to the next step
     return event

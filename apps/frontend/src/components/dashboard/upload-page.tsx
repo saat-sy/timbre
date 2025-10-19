@@ -1,10 +1,25 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { SimpleVideoUpload } from './simple-video-upload';
 import { ProcessingStatus } from './processing-status';
-import { processingService } from '../../lib/processing';
+import { jobService } from '../../lib/jobs';
 
 export function UploadPage() {
+  const router = useRouter();
+
+  const handleSubmit = async (file: File, prompt: string) => {
+    try {
+      const result = await jobService.uploadAndSubmitJob(file, prompt);
+      // Navigate to the job progress page
+      router.push(`/dashboard/${result.jobId}`);
+    } catch (error) {
+      console.error('Failed to submit job:', error);
+      // You could show an error toast here
+      alert('Failed to submit job. Please try again.');
+    }
+  };
+
   return (
     <div className="relative h-full px-6">
       {/* Processing Status - positioned at top */}
@@ -14,11 +29,7 @@ export function UploadPage() {
 
       {/* Centered Upload Interface */}
       <div className="h-full flex items-center justify-center">
-        <SimpleVideoUpload
-          onSubmit={(file, prompt) => {
-            processingService.addJob(file, prompt);
-          }}
-        />
+        <SimpleVideoUpload onSubmit={handleSubmit} />
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { VideoUploader, type UploadResult } from "@repo/ui/video-uploader";
 import { GradientButton } from "@repo/ui/gradient-button";
 
 interface SimpleVideoUploadProps {
-    onSubmit?: (file: File, prompt: string) => void;
+    onSubmit?: (file: File, prompt: string) => Promise<void>;
 }
 
 export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
@@ -28,20 +28,26 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
         console.error('Upload error:', error);
     }, []);
 
-    const handleSubmit = useCallback(() => {
-        if (selectedFile && prompt.trim() && uploadResult) {
+    const handleSubmit = useCallback(async () => {
+        if (selectedFile && prompt.trim() && uploadResult && onSubmit) {
             setIsProcessing(true);
             setHasSubmitted(true);
-            onSubmit?.(selectedFile, prompt.trim());
-
-            // Reset form after submission
-            setTimeout(() => {
+            
+            try {
+                await onSubmit(selectedFile, prompt.trim());
+                
+                // Reset form after successful submission
                 setSelectedFile(null);
                 setPrompt("");
                 setUploadResult(null);
                 setIsProcessing(false);
                 setHasSubmitted(false);
-            }, 1000);
+            } catch (error) {
+                console.error('Submission failed:', error);
+                setIsProcessing(false);
+                setHasSubmitted(false);
+                // Error handling is done in the parent component
+            }
         }
     }, [selectedFile, prompt, uploadResult, onSubmit]);
 
@@ -123,15 +129,7 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                             </GradientButton>
                         </div>
                         
-                        {/* Upload status - bottom left */}
-                        {!uploadResult && selectedFile && (
-                            <div className="absolute bottom-4 left-4">
-                                <div className="flex items-center space-x-2 text-amber-400">
-                                    <div className="w-1 h-1 bg-amber-400 rounded-full animate-pulse"></div>
-                                    <span className="text-xs">Processing...</span>
-                                </div>
-                            </div>
-                        )}
+
                     </div>
                 )}
             </div>

@@ -3,7 +3,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-from models import LambdaResponse, Job, FailureResponse
+from models import LambdaResponse, Job
 
 JOBS_TABLE = os.environ['JOBS_TABLE']
 
@@ -19,10 +19,12 @@ def lambda_handler(event, _):
         job_id = query_params.get('job_id')
         
         if not job_id:
-            return FailureResponse(
-                error='Bad Request',
-                error_code=400,
-                message='Missing job_id query parameter'
+            return LambdaResponse(
+                status_code=400,
+                body={
+                    "error": "Bad Request",
+                    "message": "Missing job_id query parameter"
+                }
             ).to_dict()
 
         response = jobs_table.get_item(
@@ -30,19 +32,23 @@ def lambda_handler(event, _):
         )
         
         if 'Item' not in response:
-            return FailureResponse(
-                error='Not Found',
-                error_code=404,
-                message='Job not found'
+            return LambdaResponse(
+                status_code=404,
+                body={
+                    "error": "Not Found",
+                    "message": "Job not found"
+                }
             ).to_dict()
         
         job = response['Item']
         
         if job.get('user_id') != user_id:
-            return FailureResponse(
-                error='Forbidden',
-                error_code=403,
-                message='Access denied: Job does not belong to user'
+            return LambdaResponse(
+                status_code=403,
+                body={
+                    "error": "Forbidden",
+                    "message": "Access denied: Job does not belong to user"
+                }
             ).to_dict()
         
         job_instance = Job(
@@ -65,15 +71,19 @@ def lambda_handler(event, _):
         
     except ClientError as e:
         print(f"DynamoDB error: {e}")
-        return FailureResponse(
-            error='Internal Server Error',
-            error_code=500,
-            message='Database error'
+        return LambdaResponse(
+            status_code=500,
+            body={
+                "error": "Internal Server Error",
+                "message": "Database error"
+            }
         ).to_dict()
     except Exception as e:
         print(f"Error: {e}")
-        return FailureResponse(
-            error='Internal Server Error',
-            error_code=500,
-            message='Internal server error'
+        return LambdaResponse(
+            status_code=500,
+            body={
+                "error": "Internal Server Error",
+                "message": "Internal server error"
+            }
         ).to_dict()
