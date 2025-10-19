@@ -7,12 +7,14 @@ Description: >
 
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 30
 
     LoggingConfig:
       LogFormat: JSON
 
 Resources:
+
+  # --- Authentication ---
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -55,6 +57,278 @@ Resources:
       UserPoolId: !Ref CognitoUserPool
       GenerateSecret: false
 
+  # --- Storage ---
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [PUT, GET, HEAD]
+            AllowedOrigins: ['*']
+
+  UploadsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref UploadsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowPresignedUploads
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource: !Sub '${UploadsBucket.Arn}/uploads/*'
+            Condition:
+              StringEquals:
+                's3:x-amz-server-side-encryption': 'AES256'
+          - Sid: AllowPresignedDownloads
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${UploadsBucket.Arn}/uploads/*'
+
+  # --- Database ---
+
+  # DynamoDB Table for Jobs
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: timbre-jobs
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  # --- API Gateway Definition ---
+  HttpApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        Authorizers:
+          CognitoUserPoolAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+      Cors:
+        AllowMethods: "'POST, GET, PUT, DELETE, OPTIONS'"
+        AllowHeaders: "'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  # Endpoint 1: /upload - Create Upload URL
+  CreateUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/create_upload_url/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref UploadsBucket
+      Layers:
+        - !Ref SharedCodeLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: post
+            RestApiId: !Ref HttpApi
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: options
+            RestApiId: !Ref HttpApi
+
+  # Endpoint 2: /schedule_job - Submit Job
+  SubmitJobFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/submit_job/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt TimbreStateMachine.Name
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref TimbreStateMachine
+          JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /schedule_job
+            Method: post
+            RestApiId: !Ref HttpApi
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /schedule_job
+            Method: options
+            RestApiId: !Ref HttpApi
+
+  # Endpoint 3: /get_job_status - Get Job Status
+  GetJobStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/get_job_status/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref JobsTable
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /get_job_status
+            Method: get
+            RestApiId: !Ref HttpApi
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /get_job_status
+            Method: options
+            RestApiId: !Ref HttpApi
+
+  # Endpoint 4: /get_user_jobs - Get User Jobs
+  GetUserJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/api/get_user_jobs/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref JobsTable
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /get_user_jobs
+            Method: get
+            RestApiId: !Ref HttpApi
+            Auth:
+              Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /get_user_jobs
+            Method: options
+            RestApiId: !Ref HttpApi
+
+  # Orchestration Lambda Functions
+
+  # Coordinator
+  CoordinatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/coordinator/
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref JobsTable
+
+  # Analyzer
+  AnalyzerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/analyzer/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Library Browser
+  LibraryBrowserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/library_browser/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Audio Generator
+  AudioGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/audio_generator/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # AV Operator
+  AVOperatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/av_operator/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+
+  # Orchestration
+  TimbreStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: src/state_machine/workflow.asl.json
+      DefinitionSubstitutions:
+        CoordinatorFunctionArn: !GetAtt CoordinatorFunction.Arn
+        AnalyzerFunctionArn: !GetAtt AnalyzerFunction.Arn
+        LibraryBrowserFunctionArn: !GetAtt LibraryBrowserFunction.Arn
+        AudioGeneratorFunctionArn: !GetAtt AudioGeneratorFunction.Arn
+        AudioVideoOpsFunctionArn: !GetAtt AVOperatorFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CoordinatorFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AnalyzerFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref LibraryBrowserFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AudioGeneratorFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AVOperatorFunction
+
+  SharedCodeLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: timbre-shared-code
+      Description: Shared code for Timbre Lambda functions
+      ContentUri: src/layers/shared_code/
+      CompatibleRuntimes:
+        - python3.13
+
+
 Outputs:
   UserPoolId:
     Description: "The ID of the Cognito User Pool"
@@ -63,3 +337,15 @@ Outputs:
   UserPoolClientId:
     Description: "The ID of the Cognito User Pool Client"
     Value: !Ref CognitoUserPoolClient
+
+  ApiEndpoint:
+    Description: "API Gateway base endpoint URL"
+    Value: !Sub "https://*.execute-api.${AWS::Region}.amazonaws.com/Prod"
+
+  UploadsBucketName:
+    Description: "Name of the S3 bucket for uploads"
+    Value: !Ref UploadsBucket
+
+  JobsTableName:
+    Description: "Name of the DynamoDB table for jobs"
+    Value: !Ref JobsTable
