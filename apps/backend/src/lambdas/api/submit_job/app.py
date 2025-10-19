@@ -116,6 +116,10 @@ def lambda_handler(event, _):
     Returns:
         dict: HTTP response with job_id, operation_type, message
     """
+    # Handle CORS preflight requests
+    if event.get('httpMethod') == 'OPTIONS':
+        return LambdaResponse(200, {}).to_dict()
+    
     logger.info("Submit job lambda handler started")
     user_id = event['requestContext']['authorizer']['claims'].get('sub')
     logger.info(f"Processing request for user_id: {user_id}")

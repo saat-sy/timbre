@@ -9,6 +9,12 @@ class LambdaResponse:
     def to_dict(self):
         return {
             'statusCode': self.status_code,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+                'Content-Type': 'application/json'
+            },
             'body': json.dumps(self.body)
         }
     

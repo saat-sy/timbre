@@ -2,6 +2,7 @@
 
 export interface UploadUrlRequest {
   filename: string;
+  contentType?: string;
 }
 
 export interface UploadUrlResponse {

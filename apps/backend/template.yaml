@@ -61,11 +61,36 @@ Resources:
   UploadsBucket:
     Type: AWS::S3::Bucket
     Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ['*']
             AllowedMethods: [PUT, GET, HEAD]
             AllowedOrigins: ['*']
+
+  UploadsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref UploadsBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowPresignedUploads
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:PutObject'
+            Resource: !Sub '${UploadsBucket.Arn}/uploads/*'
+            Condition:
+              StringEquals:
+                's3:x-amz-server-side-encryption': 'AES256'
+          - Sid: AllowPresignedDownloads
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${UploadsBucket.Arn}/uploads/*'
 
   # --- Database ---
 
@@ -94,8 +119,7 @@ Resources:
       Cors:
         AllowMethods: "'POST, GET, PUT, DELETE, OPTIONS'"
         AllowHeaders: "'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token'"
-        AllowOrigin: "'http://localhost:3000'"
-        AllowCredentials: "'true'"
+        AllowOrigin: "'*'"
 
   # Endpoint 1: /upload - Create Upload URL
   CreateUploadUrlFunction:
@@ -121,6 +145,12 @@ Resources:
             RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: options
+            RestApiId: !Ref HttpApi
 
   # Endpoint 2: /schedule_job - Submit Job
   SubmitJobFunction:
@@ -149,6 +179,12 @@ Resources:
             RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /schedule_job
+            Method: options
+            RestApiId: !Ref HttpApi
 
   # Endpoint 3: /get_job_status - Get Job Status
   GetJobStatusFunction:
@@ -174,6 +210,12 @@ Resources:
             RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /get_job_status
+            Method: options
+            RestApiId: !Ref HttpApi
 
   # Endpoint 4: /get_user_jobs - Get User Jobs
   GetUserJobsFunction:
@@ -199,6 +241,12 @@ Resources:
             RestApiId: !Ref HttpApi
             Auth:
               Authorizer: CognitoUserPoolAuthorizer
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /get_user_jobs
+            Method: options
+            RestApiId: !Ref HttpApi
 
   # Orchestration Lambda Functions
 
