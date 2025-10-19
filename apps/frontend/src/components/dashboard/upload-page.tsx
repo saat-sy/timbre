@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { SimpleVideoUpload } from './simple-video-upload';
 import { ProcessingStatus } from './processing-status';
 import { jobService } from '../../lib/jobs';
@@ -11,20 +12,40 @@ export function UploadPage() {
   const router = useRouter();
   const { error, isRetryable, showError, clearError } = useErrorState();
   const { handleUploadError, isRetryable: checkRetryable } = useErrorHandler();
-  
+  const [loadingStep, setLoadingStep] = useState<'uploading' | 'scheduling' | null>(null);
+
   // Store last submission for retry
   let lastSubmission: { file: File; prompt: string } | null = null;
 
-  const handleSubmit = async (file: File, prompt: string) => {
+  const handleSubmit = async (file: File, prompt: string, onProgress?: (step: 'uploading' | 'scheduling' | null) => void) => {
     clearError();
     lastSubmission = { file, prompt };
-    
+
     try {
-      const result = await jobService.uploadAndSubmitJob(file, prompt);
+      const result = await jobService.uploadAndSubmitJob(file, prompt, {
+        onUploadStart: () => {
+          setLoadingStep('uploading');
+          onProgress?.('uploading');
+        },
+        onUploadComplete: () => {
+          // Keep uploading state until scheduling starts
+        },
+        onSchedulingStart: () => {
+          setLoadingStep('scheduling');
+          onProgress?.('scheduling');
+        },
+        onSchedulingComplete: () => {
+          setLoadingStep(null);
+          onProgress?.(null);
+        }
+      });
+
       clearError();
       lastSubmission = null;
       router.push(`/dashboard/${result.jobId}`);
     } catch (err) {
+      setLoadingStep(null);
+      onProgress?.(null);
       const errorMessage = handleUploadError(err);
       const canRetry = checkRetryable(err);
       showError(errorMessage, canRetry);
@@ -66,7 +87,7 @@ export function UploadPage() {
 
       {/* Centered Upload Interface - takes remaining space */}
       <div className="flex-1 flex items-center justify-center">
-        <SimpleVideoUpload onSubmit={handleSubmit} />
+        <SimpleVideoUpload onSubmit={handleSubmit} loadingStep={loadingStep} />
       </div>
     </div>
   );
