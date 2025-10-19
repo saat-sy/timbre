@@ -212,6 +212,9 @@ Resources:
           JOBS_TABLE: !Ref JobsTable
       Handler: app.lambda_handler
       Runtime: python3.13
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref JobsTable
 
   # Analyzer
   AnalyzerFunction:
