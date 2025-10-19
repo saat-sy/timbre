@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { VideoUploader, type UploadResult } from "@repo/ui/video-uploader";
 import { GradientButton } from "@repo/ui/gradient-button";
+import { InlineError, useErrorState } from "../ui/error-banner";
 
 interface SimpleVideoUploadProps {
     onSubmit?: (file: File, prompt: string) => Promise<void>;
@@ -14,11 +15,30 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
     const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
+    const { error: validationError, showError: setValidationError, clearError: clearValidationError } = useErrorState();
 
     const handleFileSelect = useCallback((file: File) => {
         setSelectedFile(file);
         setUploadResult(null);
-    }, []);
+        clearValidationError();
+        
+        // Validate file immediately
+        const errors: string[] = [];
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        
+        if (file.size > maxSize) {
+            errors.push('File size must be less than 100MB');
+        }
+        
+        const allowedTypes = ['image/', 'video/', 'audio/', 'application/pdf'];
+        if (!allowedTypes.some(type => file.type.startsWith(type))) {
+            errors.push('File type not supported. Please use image, video, audio, or PDF files');
+        }
+        
+        if (errors.length > 0) {
+            setValidationError(errors.join('; '));
+        }
+    }, [clearValidationError, setValidationError]);
 
     const handleUploadComplete = useCallback((result: UploadResult) => {
         setUploadResult(result);
@@ -29,7 +49,28 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
     }, []);
 
     const handleSubmit = useCallback(async () => {
-        if (selectedFile && prompt.trim() && uploadResult && onSubmit) {
+        // Clear any previous validation errors
+        clearValidationError();
+        
+        // Validate inputs
+        const errors: string[] = [];
+        
+        if (!selectedFile) {
+            errors.push('Please select a file');
+        }
+        
+        if (!prompt.trim()) {
+            errors.push('Please enter a prompt');
+        } else if (prompt.length > 1000) {
+            errors.push('Prompt must be less than 1000 characters');
+        }
+        
+        if (errors.length > 0) {
+            setValidationError(errors.join('; '));
+            return;
+        }
+        
+        if (selectedFile && prompt.trim() && onSubmit) {
             setIsProcessing(true);
             setHasSubmitted(true);
             
@@ -40,6 +81,7 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                 setSelectedFile(null);
                 setPrompt("");
                 setUploadResult(null);
+                clearValidationError();
                 setIsProcessing(false);
                 setHasSubmitted(false);
             } catch (error) {
@@ -49,9 +91,9 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                 // Error handling is done in the parent component
             }
         }
-    }, [selectedFile, prompt, uploadResult, onSubmit]);
+    }, [selectedFile, prompt, onSubmit, clearValidationError, setValidationError]);
 
-    const isReady = selectedFile && prompt.trim() && uploadResult && !isProcessing;
+    const isReady = selectedFile && prompt.trim() && !isProcessing && !validationError;
     const showFixedChat = hasSubmitted || isProcessing;
 
     return (
@@ -83,20 +125,44 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                         onUploadError={handleUploadError}
                         maxSize={200}
                         disabled={isProcessing}
+                        showUploadButton={false}
                     />
                 </div>
 
                 {/* File preview inside connected area */}
-                {selectedFile && uploadResult && (
+                {selectedFile && (
                     <div className="px-8 py-4 bg-white/5 border-b border-white/10">
                         <div className="flex items-center justify-center space-x-3">
-                            <div className="w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                                validationError 
+                                    ? 'bg-gradient-to-br from-red-400 to-red-500' 
+                                    : 'bg-gradient-to-br from-green-400 to-emerald-500'
+                            }`}>
+                                {validationError ? (
+                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                )}
                             </div>
-                            <span className="text-white text-sm font-medium">{selectedFile.name}</span>
+                            <span className={`text-sm font-medium ${validationError ? 'text-red-400' : 'text-white'}`}>
+                                {selectedFile.name}
+                            </span>
                         </div>
+                        
+                        {/* Validation error message */}
+                        {validationError && (
+                            <div className="mt-3 px-4">
+                                <InlineError 
+                                    error={validationError}
+                                    size="sm"
+                                    onDismiss={clearValidationError}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -105,11 +171,24 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                     <div className="relative p-8">
                         <textarea
                             value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
+                            onChange={(e) => {
+                                setPrompt(e.target.value);
+                                // Clear validation error when user starts typing
+                                if (validationError && e.target.value.trim()) {
+                                    clearValidationError();
+                                }
+                            }}
                             placeholder="Describe the music you want for your video..."
-                            className="w-full h-24 px-0 py-0 bg-transparent border-0 text-white placeholder-gray-500 focus:outline-none resize-none text-base leading-relaxed"
+                            className={`w-full h-24 px-0 py-0 bg-transparent border-0 text-white placeholder-gray-500 focus:outline-none resize-none text-base leading-relaxed ${
+                                validationError ? 'text-red-300' : ''
+                            }`}
                             disabled={isProcessing}
                         />
+                        
+                        {/* Character count */}
+                        <div className="absolute bottom-16 right-4 text-xs text-gray-500">
+                            {prompt.length}/1000
+                        </div>
                         
                         {/* Send button - positioned like Claude */}
                         <div className="absolute bottom-4 right-4">
@@ -128,8 +207,19 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                                 )}
                             </GradientButton>
                         </div>
-                        
-
+                    </div>
+                )}
+                
+                {/* Validation error for prompt - shown outside the input area */}
+                {validationError && !selectedFile && (
+                    <div className="px-8 pb-4 border-t border-white/10">
+                        <div className="mt-4">
+                            <InlineError 
+                                error={validationError}
+                                size="sm"
+                                onDismiss={clearValidationError}
+                            />
+                        </div>
                     </div>
                 )}
             </div>
@@ -137,30 +227,56 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
             {/* Fixed Chat Bar - Only After Submission */}
             {showFixedChat && (
                 <div className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-white/10 p-6 z-50">
-                    <div className="max-w-4xl mx-auto relative">
-                        <textarea
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            placeholder="Describe the music you want..."
-                            className="w-full h-20 px-6 py-4 pr-16 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 transition-all resize-none"
-                            disabled={isProcessing}
-                        />
+                    <div className="max-w-4xl mx-auto">
+                        {/* Validation error for fixed chat */}
+                        {validationError && (
+                            <div className="mb-4">
+                                <InlineError 
+                                    error={validationError}
+                                    size="md"
+                                    onDismiss={clearValidationError}
+                                />
+                            </div>
+                        )}
                         
-                        <div className="absolute bottom-4 right-4">
-                            <GradientButton
-                                onClick={handleSubmit}
-                                disabled={!isReady}
-                                loading={isProcessing}
-                                className="w-10 h-10 rounded-xl p-0 flex items-center justify-center"
-                            >
-                                {isProcessing ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                ) : (
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                    </svg>
-                                )}
-                            </GradientButton>
+                        <div className="relative">
+                            <textarea
+                                value={prompt}
+                                onChange={(e) => {
+                                    setPrompt(e.target.value);
+                                    // Clear validation error when user starts typing
+                                    if (validationError && e.target.value.trim()) {
+                                        clearValidationError();
+                                    }
+                                }}
+                                placeholder="Describe the music you want..."
+                                className={`w-full h-20 px-6 py-4 pr-16 bg-white/5 border rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 transition-all resize-none ${
+                                    validationError ? 'border-red-500/50 text-red-300' : 'border-white/10'
+                                }`}
+                                disabled={isProcessing}
+                            />
+                            
+                            {/* Character count */}
+                            <div className="absolute bottom-2 left-6 text-xs text-gray-500">
+                                {prompt.length}/1000
+                            </div>
+                            
+                            <div className="absolute bottom-4 right-4">
+                                <GradientButton
+                                    onClick={handleSubmit}
+                                    disabled={!isReady}
+                                    loading={isProcessing}
+                                    className="w-10 h-10 rounded-xl p-0 flex items-center justify-center"
+                                >
+                                    {isProcessing ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                        </svg>
+                                    )}
+                                </GradientButton>
+                            </div>
                         </div>
                     </div>
                 </div>

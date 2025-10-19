@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
 import { GradientButton } from '@repo/ui/gradient-button';
 import type { JobProgress } from '../../lib/jobs';
+import { useErrorHandler } from '../../lib/utils/error-handler';
+import { ErrorCard, useErrorState } from '../ui/error-banner';
 
 interface JobProgressPageProps {
   jobProgress: JobProgress;
@@ -13,6 +15,9 @@ interface JobProgressPageProps {
 export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
   const router = useRouter();
   const [showDetails, setShowDetails] = useState(false);
+  const { error: retryError, showError: setRetryError, clearError: clearRetryError } = useErrorState();
+  const [isRetrying, setIsRetrying] = useState(false);
+  const { handleJobSubmissionError } = useErrorHandler();
 
   const getStatusIcon = () => {
     switch (jobProgress.status) {
@@ -142,9 +147,20 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
             )}
 
             {/* Error Message */}
-            {jobProgress.error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 max-w-md mx-auto">
-                <p className="text-red-400 text-sm">{jobProgress.error}</p>
+            {(jobProgress.error || retryError) && (
+              <div className="w-full max-w-lg mx-auto">
+                <ErrorCard
+                  error={retryError || jobProgress.error || ''}
+                  title={retryError ? 'Retry Failed' : 'Processing Error'}
+                  isRetryable={jobProgress.isRetryable}
+                  onDismiss={retryError ? clearRetryError : undefined}
+                  size="md"
+                />
+                {jobProgress.isRetryable && !retryError && (
+                  <p className="text-red-300 text-xs mt-3 text-center opacity-75">
+                    This error may be temporary. You can try again.
+                  </p>
+                )}
               </div>
             )}
 
@@ -170,13 +186,49 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
             {/* Retry Button for Failed Jobs */}
             {jobProgress.status === 'FAILED' && (
               <div className="space-y-4">
-                <GradientButton
-                  onClick={() => router.push('/dashboard')}
-                  size="lg"
-                  variant="secondary"
-                >
-                  Try Again
-                </GradientButton>
+                <div className="flex items-center justify-center space-x-3">
+                  <GradientButton
+                    onClick={() => router.push('/dashboard')}
+                    size="lg"
+                    variant="secondary"
+                    disabled={isRetrying}
+                  >
+                    Start New Job
+                  </GradientButton>
+                  
+                  {jobProgress.isRetryable && (
+                    <GradientButton
+                      onClick={async () => {
+                        setIsRetrying(true);
+                        clearRetryError();
+                        try {
+                          // This would need the original prompt - for now just redirect
+                          router.push('/dashboard');
+                        } catch (err) {
+                          const errorMessage = handleJobSubmissionError(err);
+                          setRetryError(errorMessage);
+                        } finally {
+                          setIsRetrying(false);
+                        }
+                      }}
+                      size="lg"
+                      variant="primary"
+                      loading={isRetrying}
+                      disabled={isRetrying}
+                    >
+                      Retry Job
+                    </GradientButton>
+                  )}
+                </div>
+                
+                {retryError && (
+                  <button
+                    onClick={clearRetryError}
+                    className="text-xs text-gray-400 hover:text-white transition-colors"
+                  >
+                    Dismiss retry error
+                  </button>
+                )}
               </div>
             )}
           </div>
