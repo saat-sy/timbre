@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
 import { GradientButton } from "@repo/ui/gradient-button";
 import { jobService, type JobProgress } from "../../lib/jobs";
+import { useErrorHandler } from "../../lib/utils/error-handler";
+import { ErrorCard, useErrorState } from "../ui/error-banner";
 
 interface HistoryManagerProps {
   className?: string;
@@ -17,7 +19,8 @@ export function HistoryManager({ className }: HistoryManagerProps) {
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { error, isRetryable, showError, clearError } = useErrorState();
+  const { handleError, isRetryable: checkRetryable } = useErrorHandler();
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -25,10 +28,11 @@ export function HistoryManager({ className }: HistoryManagerProps) {
         setLoading(true);
         const jobs = await jobService.getUserJobs();
         setAllJobs(jobs);
-        setError(null);
+        clearError();
       } catch (err) {
-        console.error('Failed to load jobs:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load jobs');
+        const errorMessage = handleError(err, 'loading user jobs');
+        const canRetry = checkRetryable(err);
+        showError(errorMessage, canRetry);
       } finally {
         setLoading(false);
       }
@@ -42,7 +46,7 @@ export function HistoryManager({ className }: HistoryManagerProps) {
       // Filter by status
       if (filter === 'completed' && job.status !== 'COMPLETED') return false;
       if (filter === 'failed' && job.status !== 'FAILED') return false;
-      
+
       // Filter by search term
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -50,7 +54,7 @@ export function HistoryManager({ className }: HistoryManagerProps) {
           job.jobId.toLowerCase().includes(searchLower)
         );
       }
-      
+
       return true;
     })
     .sort((a, b) => {
@@ -99,10 +103,11 @@ export function HistoryManager({ className }: HistoryManagerProps) {
       setLoading(true);
       const jobs = await jobService.getUserJobs();
       setAllJobs(jobs);
-      setError(null);
+      clearError();
     } catch (err) {
-      console.error('Failed to refresh jobs:', err);
-      setError(err instanceof Error ? err.message : 'Failed to refresh jobs');
+      const errorMessage = handleError(err, 'refreshing user jobs');
+      const canRetry = checkRetryable(err);
+      showError(errorMessage, canRetry);
     } finally {
       setLoading(false);
     }
@@ -198,20 +203,17 @@ export function HistoryManager({ className }: HistoryManagerProps) {
               <p className="text-gray-400">Loading jobs...</p>
             </div>
           ) : error ? (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="py-6">
+              <div className="max-w-2xl mx-auto">
+                <ErrorCard
+                  error={error}
+                  title="Error loading jobs"
+                  isRetryable={isRetryable}
+                  onRetry={handleRefresh}
+                  onDismiss={clearError}
+                  size="md"
+                />
               </div>
-              <p className="text-red-400 mb-2">Error loading jobs</p>
-              <p className="text-gray-400 text-sm mb-4">{error}</p>
-              <button
-                onClick={handleRefresh}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-              >
-                Try Again
-              </button>
             </div>
           ) : filteredJobs.length === 0 ? (
             <div className="text-center py-8">
@@ -227,8 +229,8 @@ export function HistoryManager({ className }: HistoryManagerProps) {
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {filteredJobs.map((job) => (
-                <div 
-                  key={job.jobId} 
+                <div
+                  key={job.jobId}
                   className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
                   onClick={() => handleViewJob(job.jobId)}
                 >
@@ -240,13 +242,13 @@ export function HistoryManager({ className }: HistoryManagerProps) {
                         </h4>
                         {getStatusBadge(job.status)}
                       </div>
-                      
+
                       {job.summary && (
                         <p className="text-xs text-gray-400 line-clamp-2 mb-2">
                           {job.summary}
                         </p>
                       )}
-                      
+
                       <div className="flex items-center space-x-4 text-xs text-gray-500">
                         <span>{new Date(job.createdAt).toLocaleDateString()}</span>
                         <span>{new Date(job.createdAt).toLocaleTimeString()}</span>
@@ -255,7 +257,7 @@ export function HistoryManager({ className }: HistoryManagerProps) {
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center space-x-2 ml-4" onClick={(e) => e.stopPropagation()}>
                       {job.status === 'FAILED' && (

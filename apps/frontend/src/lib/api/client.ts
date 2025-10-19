@@ -9,15 +9,16 @@ import type {
   UserJobsResponse,
   ApiError,
 } from './types';
+import { ApiException } from './types';
 
 class ApiClient {
   private async getAuthHeaders(): Promise<Record<string, string>> {
     try {
       const session = await fetchAuthSession();
       const token = session.tokens?.idToken?.toString();
-      
+
       if (!token) {
-        throw new Error('No authentication token available');
+        throw new ApiException('AuthenticationError', 'No authentication token available', 401);
       }
 
       return {
@@ -25,8 +26,11 @@ class ApiClient {
         'Content-Type': 'application/json',
       };
     } catch (error) {
+      if (error instanceof ApiException) {
+        throw error;
+      }
       console.error('Failed to get auth headers:', error);
-      throw new Error('Authentication required');
+      throw new ApiException('AuthenticationError', 'Authentication required', 401, error);
     }
   }
 
@@ -34,27 +38,42 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const headers = await this.getAuthHeaders();
-    
-    const response = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
-    });
+    try {
+      const headers = await this.getAuthHeaders();
 
-    if (!response.ok) {
-      const errorData: ApiError = await response.json().catch(() => ({
-        error: 'NetworkError',
-        error_code: response.status,
-        message: `HTTP ${response.status}: ${response.statusText}`,
-      }));
+      const response = await fetch(`${API_CONFIG.baseUrl}${endpoint}`, {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+      });
+
+      if (!response.ok) {
+        let errorData: ApiError;
+        
+        try {
+          errorData = await response.json();
+        } catch {
+          // If we can't parse the error response, create a generic error
+          errorData = {
+            error: 'NetworkError',
+            message: `HTTP ${response.status}: ${response.statusText}`,
+          };
+        }
+
+        throw ApiException.fromApiError(errorData, response.status);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (error instanceof ApiException) {
+        throw error;
+      }
       
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
+      // Handle network errors (fetch failures)
+      throw ApiException.fromNetworkError(error);
     }
-
-    return response.json();
   }
 
   async createUploadUrl(request: UploadUrlRequest): Promise<UploadUrlResponse> {
@@ -65,16 +84,25 @@ class ApiClient {
   }
 
   async uploadFile(uploadUrl: string, file: File): Promise<void> {
-    const response = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: {
-        'Content-Type': file.type,
-      },
-    });
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Upload failed with status ${response.status}`);
+      if (!response.ok) {
+        throw ApiException.fromUploadError(response.status);
+      }
+    } catch (error) {
+      if (error instanceof ApiException) {
+        throw error;
+      }
+      
+      // Handle network errors during upload
+      throw ApiException.fromNetworkError(error);
     }
   }
 
@@ -95,12 +123,12 @@ class ApiClient {
     const searchParams = new URLSearchParams();
     if (params?.limit) searchParams.set('limit', params.limit.toString());
     if (params?.status) searchParams.set('status', params.status);
-    
+
     const queryString = searchParams.toString();
-    const endpoint = queryString 
+    const endpoint = queryString
       ? `${API_CONFIG.endpoints.getUserJobs}?${queryString}`
       : API_CONFIG.endpoints.getUserJobs;
-    
+
     return this.makeRequest<UserJobsResponse>(endpoint);
   }
 }

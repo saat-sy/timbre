@@ -92,10 +92,10 @@ Resources:
           CognitoUserPoolAuthorizer:
             UserPoolArn: !GetAtt CognitoUserPool.Arn
       Cors:
-        AllowMethods: "'POST, GET, PUT'"
-        AllowHeaders: "'Content-Type, Authorization'"
-        AllowOrigin: "'*'"
-        MaxAge: "'600'"
+        AllowMethods: "'POST, GET, PUT, DELETE, OPTIONS'"
+        AllowHeaders: "'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token'"
+        AllowOrigin: "'http://localhost:3000'"
+        AllowCredentials: "'true'"
 
   # Endpoint 1: /upload - Create Upload URL
   CreateUploadUrlFunction:

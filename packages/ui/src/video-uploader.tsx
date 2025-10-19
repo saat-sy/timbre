@@ -19,6 +19,7 @@ export interface VideoUploaderProps {
   acceptedFormats?: string[];
   className?: string;
   disabled?: boolean;
+  showUploadButton?: boolean; // New prop to control upload button visibility
 }
 
 const DEFAULT_ACCEPTED_FORMATS = [
@@ -41,6 +42,7 @@ export function VideoUploader({
   acceptedFormats = DEFAULT_ACCEPTED_FORMATS,
   className,
   disabled = false,
+  showUploadButton = true,
 }: VideoUploaderProps): JSX.Element {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -77,7 +79,18 @@ export function VideoUploader({
 
     setSelectedFile(file);
     onFileSelect(file);
-  }, [validateFile, onFileSelect]);
+
+    // If showUploadButton is false, automatically trigger upload completion
+    if (!showUploadButton) {
+      const result = {
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+        uploadedAt: new Date().toISOString(),
+      };
+      onUploadComplete?.(result);
+    }
+  }, [validateFile, onFileSelect, showUploadButton, onUploadComplete]);
 
   const simulateUpload = useCallback(async (file: File) => {
     setIsUploading(true);
@@ -260,7 +273,7 @@ export function VideoUploader({
       </div>
 
       {/* File actions */}
-      {selectedFile && !isUploading && (
+      {selectedFile && !isUploading && showUploadButton && (
         <div className="mt-4 flex gap-3">
           <button
             onClick={handleUploadClick}
@@ -273,6 +286,18 @@ export function VideoUploader({
             className="px-4 py-2 bg-white/10 text-white/70 rounded-xl font-medium hover:bg-white/20 hover:text-white transition-all duration-300"
           >
             Remove
+          </button>
+        </div>
+      )}
+
+      {/* Remove button only (when showUploadButton is false) */}
+      {selectedFile && !isUploading && !showUploadButton && (
+        <div className="mt-4">
+          <button
+            onClick={handleRemoveFile}
+            className="px-4 py-2 bg-white/10 text-white/70 rounded-xl font-medium hover:bg-white/20 hover:text-white transition-all duration-300"
+          >
+            Remove File
           </button>
         </div>
       )}
