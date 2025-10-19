@@ -7,6 +7,14 @@ export interface JobSubmissionResult {
     operationType: 'new' | 'regenerate';
 }
 
+export interface UploadProgressCallback {
+    onUploadStart?: () => void;
+    onUploadProgress?: (progress: number) => void;
+    onUploadComplete?: () => void;
+    onSchedulingStart?: () => void;
+    onSchedulingComplete?: () => void;
+}
+
 export interface JobProgress {
     jobId: string;
     status: JobStatus;
@@ -36,10 +44,16 @@ class JobService {
         maxDelay: 10000,
     };
 
-    async uploadAndSubmitJob(file: File, prompt: string): Promise<JobSubmissionResult> {
+    async uploadAndSubmitJob(
+        file: File, 
+        prompt: string, 
+        callbacks?: UploadProgressCallback
+    ): Promise<JobSubmissionResult> {
         return this.withRetry(async () => {
             // Validate inputs before making API calls
             this.validateJobInputs(file, prompt);
+
+            callbacks?.onUploadStart?.();
 
             let uploadResponse;
             try {
@@ -59,7 +73,9 @@ class JobService {
             }
 
             try {
+                callbacks?.onUploadProgress?.(50); // Halfway through upload process
                 await apiClient.uploadFile(uploadResponse.upload_url, file);
+                callbacks?.onUploadComplete?.();
             } catch (error) {
                 if (error instanceof ApiException) {
                     throw new ApiException(
@@ -73,10 +89,12 @@ class JobService {
             }
 
             try {
+                callbacks?.onSchedulingStart?.();
                 const jobResponse = await apiClient.submitJob({
                     prompt,
                     s3_path: uploadResponse.s3_path,
                 });
+                callbacks?.onSchedulingComplete?.();
 
                 return {
                     jobId: jobResponse.job_id,

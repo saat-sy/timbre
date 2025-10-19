@@ -6,42 +6,43 @@ import { GradientButton } from "@repo/ui/gradient-button";
 import { InlineError, useErrorState } from "../ui/error-banner";
 
 interface SimpleVideoUploadProps {
-    onSubmit?: (file: File, prompt: string) => Promise<void>;
+    onSubmit?: (file: File, prompt: string, onProgress?: (step: 'uploading' | 'scheduling' | null) => void) => Promise<void>;
+    loadingStep?: 'uploading' | 'scheduling' | null;
 }
 
-export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
+export function SimpleVideoUpload({ onSubmit, loadingStep }: SimpleVideoUploadProps) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [prompt, setPrompt] = useState("");
-    const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+
     const [isProcessing, setIsProcessing] = useState(false);
     const [hasSubmitted, setHasSubmitted] = useState(false);
+    const [currentStep, setCurrentStep] = useState<'uploading' | 'scheduling' | null>(null);
     const { error: validationError, showError: setValidationError, clearError: clearValidationError } = useErrorState();
 
     const handleFileSelect = useCallback((file: File) => {
         setSelectedFile(file);
-        setUploadResult(null);
         clearValidationError();
-        
+
         // Validate file immediately
         const errors: string[] = [];
         const maxSize = 100 * 1024 * 1024; // 100MB
-        
+
         if (file.size > maxSize) {
             errors.push('File size must be less than 100MB');
         }
-        
+
         const allowedTypes = ['image/', 'video/', 'audio/', 'application/pdf'];
         if (!allowedTypes.some(type => file.type.startsWith(type))) {
             errors.push('File type not supported. Please use image, video, audio, or PDF files');
         }
-        
+
         if (errors.length > 0) {
             setValidationError(errors.join('; '));
         }
     }, [clearValidationError, setValidationError]);
 
-    const handleUploadComplete = useCallback((result: UploadResult) => {
-        setUploadResult(result);
+    const handleUploadComplete = useCallback(() => {
+        // No action needed on upload complete
     }, []);
 
     const handleUploadError = useCallback((error: string) => {
@@ -51,43 +52,46 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
     const handleSubmit = useCallback(async () => {
         // Clear any previous validation errors
         clearValidationError();
-        
+
         // Validate inputs
         const errors: string[] = [];
-        
+
         if (!selectedFile) {
             errors.push('Please select a file');
         }
-        
+
         if (!prompt.trim()) {
             errors.push('Please enter a prompt');
         } else if (prompt.length > 1000) {
             errors.push('Prompt must be less than 1000 characters');
         }
-        
+
         if (errors.length > 0) {
             setValidationError(errors.join('; '));
             return;
         }
-        
+
         if (selectedFile && prompt.trim() && onSubmit) {
             setIsProcessing(true);
             setHasSubmitted(true);
-            
+
             try {
-                await onSubmit(selectedFile, prompt.trim());
-                
+                await onSubmit(selectedFile, prompt.trim(), (step) => {
+                    setCurrentStep(step);
+                });
+
                 // Reset form after successful submission
                 setSelectedFile(null);
                 setPrompt("");
-                setUploadResult(null);
                 clearValidationError();
                 setIsProcessing(false);
                 setHasSubmitted(false);
+                setCurrentStep(null);
             } catch (error) {
                 console.error('Submission failed:', error);
                 setIsProcessing(false);
                 setHasSubmitted(false);
+                setCurrentStep(null);
                 // Error handling is done in the parent component
             }
         }
@@ -95,6 +99,18 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
 
     const isReady = selectedFile && prompt.trim() && !isProcessing && !validationError;
     const showFixedChat = hasSubmitted || isProcessing;
+    const activeStep = loadingStep || currentStep;
+
+    const getLoadingText = () => {
+        switch (activeStep) {
+            case 'uploading':
+                return 'Uploading your file...';
+            case 'scheduling':
+                return 'Scheduling your job...';
+            default:
+                return 'Processing...';
+        }
+    };
 
     return (
         <div className="w-full max-w-4xl mx-auto">
@@ -107,13 +123,30 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    
+
                     {/* Smaller heading */}
                     <h1 className="text-3xl font-normal text-white">
                         What can I create for you today?
                     </h1>
                 </div>
             </div>
+
+            {/* Loading Overlay */}
+            {isProcessing && activeStep && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white/10 border border-white/20 rounded-2xl p-8 max-w-md mx-4">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <div>
+                                <h3 className="text-white font-medium">{getLoadingText()}</h3>
+                                <p className="text-gray-400 text-sm mt-1">
+                                    {activeStep === 'uploading' ? 'This may take a moment depending on file size' : 'Setting up your music generation'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Connected upload and text area */}
             <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -133,11 +166,10 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                 {selectedFile && (
                     <div className="px-8 py-4 bg-white/5 border-b border-white/10">
                         <div className="flex items-center justify-center space-x-3">
-                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                                validationError 
-                                    ? 'bg-gradient-to-br from-red-400 to-red-500' 
-                                    : 'bg-gradient-to-br from-green-400 to-emerald-500'
-                            }`}>
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${validationError
+                                ? 'bg-gradient-to-br from-red-400 to-red-500'
+                                : 'bg-gradient-to-br from-green-400 to-emerald-500'
+                                }`}>
                                 {validationError ? (
                                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -152,11 +184,11 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                                 {selectedFile.name}
                             </span>
                         </div>
-                        
+
                         {/* Validation error message */}
                         {validationError && (
                             <div className="mt-3 px-4">
-                                <InlineError 
+                                <InlineError
                                     error={validationError}
                                     size="sm"
                                     onDismiss={clearValidationError}
@@ -179,17 +211,16 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                                 }
                             }}
                             placeholder="Describe the music you want for your video..."
-                            className={`w-full h-24 px-0 py-0 bg-transparent border-0 text-white placeholder-gray-500 focus:outline-none resize-none text-base leading-relaxed ${
-                                validationError ? 'text-red-300' : ''
-                            }`}
+                            className={`w-full h-24 px-0 py-0 bg-transparent border-0 text-white placeholder-gray-500 focus:outline-none resize-none text-base leading-relaxed ${validationError ? 'text-red-300' : ''
+                                }`}
                             disabled={isProcessing}
                         />
-                        
+
                         {/* Character count */}
                         <div className="absolute bottom-16 right-4 text-xs text-gray-500">
                             {prompt.length}/1000
                         </div>
-                        
+
                         {/* Send button - positioned like Claude */}
                         <div className="absolute bottom-4 right-4">
                             <GradientButton
@@ -209,12 +240,12 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                         </div>
                     </div>
                 )}
-                
+
                 {/* Validation error for prompt - shown outside the input area */}
                 {validationError && !selectedFile && (
                     <div className="px-8 pb-4 border-t border-white/10">
                         <div className="mt-4">
-                            <InlineError 
+                            <InlineError
                                 error={validationError}
                                 size="sm"
                                 onDismiss={clearValidationError}
@@ -231,14 +262,14 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                         {/* Validation error for fixed chat */}
                         {validationError && (
                             <div className="mb-4">
-                                <InlineError 
+                                <InlineError
                                     error={validationError}
                                     size="md"
                                     onDismiss={clearValidationError}
                                 />
                             </div>
                         )}
-                        
+
                         <div className="relative">
                             <textarea
                                 value={prompt}
@@ -250,17 +281,16 @@ export function SimpleVideoUpload({ onSubmit }: SimpleVideoUploadProps) {
                                     }
                                 }}
                                 placeholder="Describe the music you want..."
-                                className={`w-full h-20 px-6 py-4 pr-16 bg-white/5 border rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 transition-all resize-none ${
-                                    validationError ? 'border-red-500/50 text-red-300' : 'border-white/10'
-                                }`}
+                                className={`w-full h-20 px-6 py-4 pr-16 bg-white/5 border rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-white/20 transition-all resize-none ${validationError ? 'border-red-500/50 text-red-300' : 'border-white/10'
+                                    }`}
                                 disabled={isProcessing}
                             />
-                            
+
                             {/* Character count */}
                             <div className="absolute bottom-2 left-6 text-xs text-gray-500">
                                 {prompt.length}/1000
                             </div>
-                            
+
                             <div className="absolute bottom-4 right-4">
                                 <GradientButton
                                     onClick={handleSubmit}
