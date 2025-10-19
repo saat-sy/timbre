@@ -1,0 +1,49 @@
+{
+  "Comment": "Timbre video-to-music pipeline workflow",
+  "StartAt": "RunCoordinator",
+  "States": {
+    "RunCoordinator": {
+      "Type": "Task",
+      "Resource": "${CoordinatorFunctionArn}",
+      "Next": "RunAnalyzer"
+    },
+    "RunAnalyzer": {
+      "Type": "Task",
+      "Resource": "${AnalyzerFunctionArn}",
+      "Next": "RunLibraryBrowser"
+    },
+    "RunLibraryBrowser": {
+      "Type": "Task",
+      "Resource": "${LibraryBrowserFunctionArn}",
+      "Next": "CheckIfAudioFound" 
+    },
+
+    "CheckIfAudioFound": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.found_in_library",
+          "BooleanEquals": true,
+          "Next": "RunAudioVideoOps" 
+        }
+      ],
+      "Default": "RunGenerateAudio" 
+    },
+
+    "RunGenerateAudio": {
+      "Type": "Task",
+      "Resource": "${AudioGeneratorFunctionArn}",
+      "Next": "RunAudioVideoOps"
+    },
+    "RunAudioVideoOps": {
+      "Type": "Task",
+      "Resource": "${AudioVideoOpsFunctionArn}",
+      "Next": "GenerateSummary"
+    },
+    "GenerateSummary": {
+      "Type": "Task",
+      "Resource": "${CoordinatorFunctionArn}",
+      "End": true
+    }
+  }
+}
