@@ -10,26 +10,8 @@
     "RunAnalyzer": {
       "Type": "Task",
       "Resource": "${AnalyzerFunctionArn}",
-      "Next": "RunLibraryBrowser"
+      "Next": "RunGenerateAudio"
     },
-    "RunLibraryBrowser": {
-      "Type": "Task",
-      "Resource": "${LibraryBrowserFunctionArn}",
-      "Next": "CheckIfAudioFound" 
-    },
-
-    "CheckIfAudioFound": {
-      "Type": "Choice",
-      "Choices": [
-        {
-          "Variable": "$.found_in_library",
-          "BooleanEquals": true,
-          "Next": "RunAudioVideoOps" 
-        }
-      ],
-      "Default": "RunGenerateAudio" 
-    },
-
     "RunGenerateAudio": {
       "Type": "Task",
       "Resource": "${AudioGeneratorFunctionArn}",

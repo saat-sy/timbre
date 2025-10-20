@@ -44,7 +44,7 @@ def update_job_status(job_id, status, final_url=None, summary=None):
         raise
 
 
-def lambda_handler(event, context):
+def lambda_handler(event, _):
     """
     Coordinates job processing workflow and updates job status.
     
@@ -62,14 +62,12 @@ def lambda_handler(event, context):
     current_status = event.get('status')
     
     if current_status == 'PROCESSED':
-        dummy_final_url = f"s3://timbre-bucket/final/{job_id}-processed.mp4"
-        dummy_summary = "Video processing completed successfully with AI-generated audio track."
-        
+        final_url = event.get('final_url', '')
+        summary = event.get('summary', '')
+
         logger.info(f"Job {job_id} processing completed, updating to COMPLETED status")
-        update_job_status(job_id, 'COMPLETED', dummy_final_url, dummy_summary)
+        update_job_status(job_id, 'COMPLETED', final_url, summary)
         event['status'] = 'COMPLETED'
-        event['final_url'] = dummy_final_url
-        event['summary'] = dummy_summary
     else:
         logger.info(f"Job {job_id} starting, updating to PROCESSING status")
         update_job_status(job_id, 'PROCESSING')

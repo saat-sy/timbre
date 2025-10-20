@@ -49,6 +49,7 @@ def lambda_handler(event, _):
             job_id=job['job_id'], user_id=job.get('user_id', ''), s3_path=job.get('s3_path', ''),
             prompts=job.get('prompts', []), status=job.get('status', 'unknown'), operation_type=job.get('operation_type', ''),
             final_url=job.get('final_url', ''), summary=job.get('summary', ''),
+            agent_session_id=job.get('agent_session_id', ''),
             created_at=job.get('created_at', ''), updated_at=job.get('updated_at', '')
         )
         

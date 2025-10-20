@@ -5,6 +5,7 @@ import boto3
 import re
 import logging
 from datetime import datetime, timezone
+from typing import Any, List, cast
 
 from models import LambdaResponse, Job
 
@@ -52,6 +53,11 @@ def handle_job_regeneration(job_id, user_id, prompt, current_timestamp):
             raise PermissionError("Unauthorized access")
         
         existing_prompts = job.get('prompts', [])
+        if existing_prompts is None:
+            existing_prompts = []
+        elif not isinstance(existing_prompts, list):
+            existing_prompts = [existing_prompts]
+        existing_prompts = cast(List[Any], existing_prompts)
         updated_prompts = existing_prompts + [prompt]
         
         response = jobs_table.update_item(
@@ -61,7 +67,8 @@ def handle_job_regeneration(job_id, user_id, prompt, current_timestamp):
             ExpressionAttributeValues={
                 ':prompts': updated_prompts,
                 ':status': 'SCHEDULED',
-                ':updated_at': current_timestamp
+                ':updated_at': current_timestamp,
+                ':operation_type': 'regenerate'
             },
             ReturnValues='ALL_NEW'
         )
@@ -78,7 +85,7 @@ def create_new_job(job_id, user_id, s3_path, prompt, current_timestamp):
     job = Job(
         job_id=job_id, user_id=user_id, s3_path=s3_path, prompts=[prompt],
         status='SCHEDULED', operation_type="new", final_url='', summary='',
-        created_at=current_timestamp, updated_at=current_timestamp
+        agent_session_id='', created_at=current_timestamp, updated_at=current_timestamp
     )
     try:
         jobs_table.put_item(Item=job.to_dict())
@@ -89,9 +96,19 @@ def create_new_job(job_id, user_id, s3_path, prompt, current_timestamp):
 
 def start_step_function(job_id, user_id, s3_path, prompts, operation_type):
     execution_name = f"{job_id}-{int(datetime.now(timezone.utc).timestamp() * 1000)}"
-    job_input = {'job_id': job_id, 'user_id': user_id, 's3_path': s3_path, 'prompts': prompts, 'operation_type': operation_type}
+    
     try:
-        sfn.start_execution(stateMachineArn=STATE_MACHINE_ARN, name=execution_name, input=json.dumps(job_input))
+        get_response = jobs_table.get_item(Key={'job_id': job_id})
+        if 'Item' not in get_response:
+            raise ValueError("Job not found")
+        job_object = get_response['Item']
+        logger.info(f"Retrieved complete job object for execution: {execution_name}")
+    except Exception as e:
+        logger.error(f"Error retrieving job object: {e}")
+        raise RuntimeError("Error retrieving job data")
+    
+    try:
+        sfn.start_execution(stateMachineArn=STATE_MACHINE_ARN, name=execution_name, input=json.dumps(job_object))
         logger.info(f"Started step function execution: {execution_name}")
     except Exception as e:
         logger.error(f"Error starting Step Functions execution: {e}")
@@ -116,7 +133,6 @@ def lambda_handler(event, _):
     Returns:
         dict: HTTP response with job_id, operation_type, message
     """
-    # Handle CORS preflight requests
     if event.get('httpMethod') == 'OPTIONS':
         return LambdaResponse(200, {}).to_dict()
     

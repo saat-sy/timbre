@@ -24,6 +24,7 @@ def convert_to_job_objects(jobs_data):
                 job_id=job_data.get('job_id', ''), user_id=job_data.get('user_id', ''), s3_path=job_data.get('s3_path', ''),
                 prompts=job_data.get('prompts', []), status=job_data.get('status', 'unknown'), operation_type=job_data.get('operation_type', ''),
                 final_url=job_data.get('final_url', ''), summary=job_data.get('summary', ''),
+                agent_session_id=job_data.get('agent_session_id', ''),
                 created_at=job_data.get('created_at', ''), updated_at=job_data.get('updated_at', '')
             )
             jobs.append(job.to_dict())

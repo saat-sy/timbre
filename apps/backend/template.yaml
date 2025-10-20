@@ -272,14 +272,6 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.13
 
-  # Library Browser
-  LibraryBrowserFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/lambdas/steps/library_browser/
-      Handler: app.lambda_handler
-      Runtime: python3.13
-
   # Audio Generator
   AudioGeneratorFunction:
     Type: AWS::Serverless::Function
