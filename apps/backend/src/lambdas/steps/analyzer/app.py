@@ -98,7 +98,7 @@ def lambda_handler(event, context):
         response_body = response['response'].read()
         response_data = json.loads(response_body)
         
-        return _extract_plan(response_data)
+        return _extract_plan(response_data["result"])
 
     except ValueError as ve:
         logger.error(f"JSON extraction failed: {str(ve)}")

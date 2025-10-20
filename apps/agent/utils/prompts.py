@@ -69,9 +69,7 @@ Video to analyze: {s3_url}
 Follow your established workflow to analyze this video and generate background music prompts that fulfill the user's request."""
     
     @staticmethod
-    def get_regerate_prompt(previous_prompts: List[str], previous_responses: List[str], prompt: str, s3_url: str):
+    def get_regerate_prompt(prompt: str, s3_url: str):
         return f"""Your previous analysis attempts were unsatisfactory. Review your earlier prompts and responses and tailor the prompts based on the new user request.
-Previous Prompts: {previous_prompts}
-Previous Responses: {previous_responses}
 User Request: {prompt}
 Video to analyze: {s3_url}"""

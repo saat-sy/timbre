@@ -25,23 +25,8 @@ def invoke(payload):
         return {"error": message}
 
     if payload.get("type") == "regenerate":
-        is_valid, message = validate_api_request(
-            payload,
-            required_keys=[
-                "type",
-                "prompt",
-                "s3_url",
-                "previous_prompts",
-                "previous_responses",
-            ],
-        )
-        if not is_valid:
-            return {"error": message}
         user_message = Prompts.get_regerate_prompt(
-            previous_prompts=payload.get("previous_prompts"),
-            previous_responses=payload.get("previous_responses"),
-            prompt=payload.get("prompt"),
-            s3_url=payload.get("s3_url"),
+            prompt=payload.get("prompt"), s3_url=payload.get("s3_url"),
         )
     else:
         user_message = Prompts.get_new_video_prompt(
@@ -55,6 +40,5 @@ def invoke(payload):
 
 if __name__ == "__main__":
     print("Starting Bedrock Agent Core App...")
-    # app.run()
-    agent("Hello")
+    app.run()
 
