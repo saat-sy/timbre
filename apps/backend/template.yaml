@@ -287,6 +287,16 @@ Resources:
       CodeUri: src/lambdas/steps/av_operator/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Timeout: 300
+      MemorySize: 1024
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref UploadsBucket
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref UploadsBucket
 
   # Orchestration
   TimbreStateMachine:
@@ -296,7 +306,6 @@ Resources:
       DefinitionSubstitutions:
         CoordinatorFunctionArn: !GetAtt CoordinatorFunction.Arn
         AnalyzerFunctionArn: !GetAtt AnalyzerFunction.Arn
-        LibraryBrowserFunctionArn: !GetAtt LibraryBrowserFunction.Arn
         AudioGeneratorFunctionArn: !GetAtt AudioGeneratorFunction.Arn
         AudioVideoOpsFunctionArn: !GetAtt AVOperatorFunction.Arn
       Policies:
@@ -304,8 +313,6 @@ Resources:
             FunctionName: !Ref CoordinatorFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AnalyzerFunction
-        - LambdaInvokePolicy:
-            FunctionName: !Ref LibraryBrowserFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AudioGeneratorFunction
         - LambdaInvokePolicy:
