@@ -5,24 +5,45 @@
     "RunCoordinator": {
       "Type": "Task",
       "Resource": "${CoordinatorFunctionArn}",
-      "Next": "RunAnalyzer"
+      "Next": "RunAnalyzer",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleFailure"
+      }]
     },
     "RunAnalyzer": {
       "Type": "Task",
       "Resource": "${AnalyzerFunctionArn}",
-      "Next": "RunGenerateAudio"
+      "Next": "RunGenerateAudio",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleFailure"
+      }]
     },
     "RunGenerateAudio": {
       "Type": "Task",
       "Resource": "${AudioGeneratorFunctionArn}",
-      "Next": "RunAudioVideoOps"
+      "Next": "RunAudioVideoOps",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleFailure"
+      }]
     },
     "RunAudioVideoOps": {
       "Type": "Task",
       "Resource": "${AudioVideoOpsFunctionArn}",
-      "Next": "GenerateSummary"
+      "Next": "GenerateSummary",
+      "Catch": [{
+        "ErrorEquals": ["States.ALL"],
+        "Next": "HandleFailure"
+      }]
     },
     "GenerateSummary": {
+      "Type": "Task",
+      "Resource": "${CoordinatorFunctionArn}",
+      "End": true
+    },
+    "HandleFailure": {
       "Type": "Task",
       "Resource": "${CoordinatorFunctionArn}",
       "End": true

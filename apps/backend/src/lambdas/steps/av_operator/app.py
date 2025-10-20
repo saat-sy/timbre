@@ -35,17 +35,13 @@ def lambda_handler(event, context):
             output_key = f"final/{os.path.basename(video_key)}"
             upload_to_s3(bucket_name, output_key, output_file)
             output_s3_url = f"s3://{bucket_name}/{output_key}"
-            
-        return {
-            "statusCode": 200,
-            "output_s3_path": output_s3_url
-        }
+
+            event["final_url"] = output_s3_url
+            event["status"] = "PROCESSED"
+        return event
         
     except Exception as e:
-        return {
-            "statusCode": 500,
-            "error": str(e)
-        }
+        raise e
 
 def parse_s3_url(s3_url):
     parsed = urlparse(s3_url)
