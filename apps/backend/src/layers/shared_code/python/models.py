@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 
 @dataclass
 class LambdaResponse:
@@ -29,10 +29,11 @@ class Job:
     prompts: list
     status: str
     operation_type: str
-    final_url: str
-    summary: str
-    created_at: str
-    updated_at: str
+    final_url: str = ""
+    summary: str = ""
+    agent_session_id: str = ""
+    created_at: str = ""
+    updated_at: str = ""
 
     def to_dict(self):
         return asdict(self)
@@ -50,4 +51,3 @@ class UploadInfo:
     
     def to_json(self):
         return json.dumps(self.to_dict())
-    

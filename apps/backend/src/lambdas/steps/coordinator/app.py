@@ -1,50 +1,44 @@
-import json
 import boto3
 import os
-import time
 import logging
+import json
 from datetime import datetime, timezone
+
+from utils import validate_event, update_field_in_dynamodb
+from constants import EventFields, JobStatus, Constants
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 JOBS_TABLE = os.environ['JOBS_TABLE']
-jobs_table = boto3.resource('dynamodb').Table(JOBS_TABLE)
+dynamodb_resource = boto3.resource('dynamodb')
+jobs_table = dynamodb_resource.Table(JOBS_TABLE)
 
-def update_job_status(job_id, status, final_url=None, summary=None):
-    try:
-        update_expressions = ['#status = :status', 'updated_at = :updated_at']
-        expression_attribute_names = {'#status': 'status'}
-        expression_attribute_values = {
-            ':status': status,
-            ':updated_at': datetime.now(timezone.utc).isoformat()
-        }
-        
-        if final_url:
-            update_expressions.append('#final_url = :final_url')
-            expression_attribute_names['#final_url'] = 'final_url'
-            expression_attribute_values[':final_url'] = final_url
-        
-        if summary:
-            update_expressions.append('#summary = :summary')
-            expression_attribute_names['#summary'] = 'summary'
-            expression_attribute_values[':summary'] = summary
-        
-        response = jobs_table.update_item(
-            Key={'job_id': job_id},
-            UpdateExpression='SET ' + ', '.join(update_expressions),
-            ExpressionAttributeNames=expression_attribute_names,
-            ExpressionAttributeValues=expression_attribute_values,
-            ReturnValues='UPDATED_NEW'
-        )
-        logger.info(f"Updated job {job_id} status to {status}")
-        return response.get('Attributes', {})
-    except Exception as e:
-        logger.error(f"Error updating job {job_id} status: {e}")
-        raise
+def _summarize_generated_content(prompt, plan):
+    """
+    Summarize the generated content using a simple heuristic.
+    
+    Args:
+        content (str): The content to summarize.
+    
+    Returns:
+        str: A summary of the content.
+    """
+    bedrock_resource = boto3.client('bedrock', region_name='us-east-2')
+    summary_prompt = Constants.get_summary_prompt(prompt, plan)
 
+    response = bedrock_resource.invoke_model(
+        modelId=Constants.SUMMARY_MODEL,
+        body=json.dumps({
+            "prompt": summary_prompt,
+        }),
+        contentType='application/json',
+        accept='application/json',
+    )
 
-def lambda_handler(event, context):
+    return json.loads(response['body'].read())
+
+def lambda_handler(event, _):
     """
     Coordinates job processing workflow and updates job status.
     
@@ -56,23 +50,65 @@ def lambda_handler(event, context):
         dict: Updated event for next step
     """
     logger.info("Coordinator Lambda started")
-    logger.info(f"Processing job: {event.get('job_id')}")
     
-    job_id = event.get('job_id')
-    current_status = event.get('status')
-    
-    if current_status == 'PROCESSED':
-        dummy_final_url = f"s3://timbre-bucket/final/{job_id}-processed.mp4"
-        dummy_summary = "Video processing completed successfully with AI-generated audio track."
+    try: 
+        logger.info("Validating event for required fields")
+        validate_event(
+            event,
+            required_fields=[EventFields.JOB_ID, EventFields.STATUS]
+        )
+
+        logger.info(f"Processing job: {event.get(EventFields.JOB_ID)}")
+
+        job_id = event.get(EventFields.JOB_ID)
+        status = event.get(EventFields.STATUS)
+
+        if status == JobStatus.PROCESSED:
+            logger.info(f"Job {job_id} processing completed, updating to COMPLETED status")
+            validate_event(
+                event,
+                required_fields=[EventFields.FINAL_URL, EventFields.PLAN]
+            )
+            final_url = event.get(EventFields.FINAL_URL)
+            plan = event.get(EventFields.PLAN)
+
+            summary = _summarize_generated_content(event.get(EventFields.PROMPTS)[-1], plan)
+
+            update_field_in_dynamodb(
+                jobs_table,
+                job_id,
+                {
+                    EventFields.STATUS: JobStatus.COMPLETED,
+                    EventFields.FINAL_URL: final_url,
+                    EventFields.SUMMARY: summary,
+                    EventFields.PLAN: plan,
+                    EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
+                }
+            )
+        elif status == JobStatus.SCHEDULED:
+            logger.info(f"Job {job_id} starting, updating to PROCESSING status")
+            update_field_in_dynamodb(
+                jobs_table,
+                job_id,
+                {EventFields.STATUS: JobStatus.PROCESSING, EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()}
+            )
+            event[EventFields.STATUS] = JobStatus.PROCESSING
+        elif status == JobStatus.FAILED:
+            logger.info(f"Job {job_id} failed, updating to FAILED status")
+            update_field_in_dynamodb(
+                jobs_table,
+                job_id,
+                {EventFields.STATUS: JobStatus.FAILED, EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()}
+            )
+            event[EventFields.STATUS] = JobStatus.FAILED
         
-        logger.info(f"Job {job_id} processing completed, updating to COMPLETED status")
-        update_job_status(job_id, 'COMPLETED', dummy_final_url, dummy_summary)
-        event['status'] = 'COMPLETED'
-        event['final_url'] = dummy_final_url
-        event['summary'] = dummy_summary
-    else:
-        logger.info(f"Job {job_id} starting, updating to PROCESSING status")
-        update_job_status(job_id, 'PROCESSING')
-        event['status'] = 'PROCESSING'
-    
-    return event
+        return event
+    except Exception as e:
+        logger.error(f"Error in coordinator lambda: {e}")
+        update_field_in_dynamodb(
+            jobs_table,
+            event.get(EventFields.JOB_ID, 'unknown'),
+            {EventFields.STATUS: JobStatus.FAILED, EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()}
+        )
+        event[EventFields.STATUS] = JobStatus.FAILED
+        raise Exception(f"Coordinator Lambda failed: {str(e)}")
