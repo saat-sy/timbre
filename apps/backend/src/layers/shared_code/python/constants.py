@@ -1,6 +1,5 @@
 class Constants:
-    AGENT_RUNTIME_ARN = "arn:aws:bedrock-agentcore:us-west-2:461629554033:runtime/timbreagent-wKLxYT3nuj"
-    SUMMARY_MODEL = "amazon.nova-pro-v1:0"
+    SUMMARY_MODEL = "amazon.nova-lite-v1:0"
 
     @staticmethod
     def get_summary_prompt(prompt, plan):

@@ -107,7 +107,7 @@ def lambda_handler(event, context):
         ).encode()
 
         response = agent_core_app.invoke_agent_runtime(
-            agentRuntimeArn=Constants.AGENT_RUNTIME_ARN,
+            agentRuntimeArn=os.environ.get('AGENT_RUNTIME_ARN'),
             runtimeSessionId=session,
             payload=payload,
         )
