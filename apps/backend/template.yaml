@@ -271,6 +271,12 @@ Resources:
       CodeUri: src/lambdas/steps/analyzer/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref JobsTable
 
   # Audio Generator
   AudioGeneratorFunction:
@@ -279,6 +285,12 @@ Resources:
       CodeUri: src/lambdas/steps/audio_generator/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: !Ref JobsTable
 
   # AV Operator
   AVOperatorFunction:
@@ -294,9 +306,12 @@ Resources:
             BucketName: !Ref UploadsBucket
         - S3WritePolicy:
             BucketName: !Ref UploadsBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
       Environment:
         Variables:
           BUCKET_NAME: !Ref UploadsBucket
+          JOBS_TABLE: !Ref JobsTable
 
   # Orchestration
   TimbreStateMachine:
