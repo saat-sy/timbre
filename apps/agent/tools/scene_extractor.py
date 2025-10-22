@@ -20,8 +20,10 @@ def _validate_input(video_path):
         except Exception as e:
             raise ValueError(f"Error accessing S3 object: {e}")
     else:
+        if not os.path.exists(video_path):
+            raise ValueError(f"Local video file does not exist: {video_path}")
         if not os.path.isfile(video_path):
-            raise ValueError(f"Local file does not exist: {video_path}")
+            raise ValueError(f"Path is not a file: {video_path}")
 
 def _download_s3_file(s3_url):
     """Download S3 file to temporary location"""

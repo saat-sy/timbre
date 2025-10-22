@@ -72,37 +72,47 @@ def describe_image(time: str, video_path: str) -> str:
             image_data = image_file.read()
             image_base64 = base64.b64encode(image_data).decode('utf-8')
         
-        request_body = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1000,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
+        system_list = [
+            {
+                "text": "Please provide a detailed description of this image, including the scene, objects, people, mood, lighting, colors, and any notable visual elements that would be relevant for understanding the context of this video frame."
+            }
+        ]
+
+        message_list = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "image": {
+                            "format": "jpeg",
                             "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": image_base64
+                                "bytes": image_base64
                             }
-                        },
-                        {
-                            "type": "text",
-                            "text": "Please provide a detailed description of this image, including the scene, objects, people, mood, lighting, colors, and any notable visual elements that would be relevant for understanding the context of this video frame."
                         }
-                    ]
-                }
-            ]
+                    },
+                    {
+                        "text": "Describe this image in detail."
+                    }
+                ]
+            }
+        ]
+
+        native_request = {
+            "schemaVersion": "messages-v1",
+            "messages": message_list,
+            "system": system_list,
+            "inferenceConfig": {
+                "max_new_tokens": 1000
+            }
         }
         
         response = bedrock_client.invoke_model(
-            modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
-            body=json.dumps(request_body)
+            modelId='us.amazon.nova-pro-v1:0',
+            body=json.dumps(native_request)
         )
         
         response_body = json.loads(response['body'].read())
-        description = response_body['content'][0]['text']
+        description = response_body['output']['message']['content'][0]['text']
         
         try:
             if video_path.startswith('s3://'):
