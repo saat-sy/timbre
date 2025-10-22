@@ -27,7 +27,7 @@ export interface JobStatusResponse {
   user_id: string;
   s3_path: string;
   prompts: string[];
-  status: 'SCHEDULED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  status: 'SCHEDULED' | 'PROCESSING' | 'ANALYZED' | 'AUDIO_GENERATED' | 'PROCESSED' | 'COMPLETED' | 'FAILED';
   operation_type: string;
   final_url: string;
   summary: string;

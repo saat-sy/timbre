@@ -114,7 +114,7 @@ def lambda_handler(event, context):
             audio_files = []
             for segment in plan:
                 audio_file = os.path.join(temp_dir, f"audio_{segment['start']}.wav")
-                audio_bucket, audio_key = _parse_s3_url(segment["audio_path"])
+                audio_bucket, audio_key = _parse_s3_url(segment["audio_s3_url"])
                 _download_from_s3(audio_bucket, audio_key, audio_file)
                 audio_files.append({
                     "file": audio_file,
@@ -144,3 +144,4 @@ def lambda_handler(event, context):
     except Exception as e:
         raise RuntimeError(f"Audio video process failed: {str(e)}")
     
+i

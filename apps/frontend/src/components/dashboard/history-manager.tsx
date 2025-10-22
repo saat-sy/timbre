@@ -71,6 +71,9 @@ export function HistoryManager({ className }: HistoryManagerProps) {
     const styles = {
       SCHEDULED: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
       PROCESSING: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      ANALYZED: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      AUDIO_GENERATED: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      PROCESSED: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       COMPLETED: 'bg-green-500/20 text-green-400 border-green-500/30',
       FAILED: 'bg-red-500/20 text-red-400 border-red-500/30',
     };
@@ -78,6 +81,9 @@ export function HistoryManager({ className }: HistoryManagerProps) {
     const labels = {
       SCHEDULED: 'Scheduled',
       PROCESSING: 'Processing',
+      ANALYZED: 'Analyzed',
+      AUDIO_GENERATED: 'Audio Generated',
+      PROCESSED: 'Processed',
       COMPLETED: 'Completed',
       FAILED: 'Failed',
     };
@@ -117,7 +123,13 @@ export function HistoryManager({ className }: HistoryManagerProps) {
     total: allJobs.length,
     completed: allJobs.filter(job => job.status === 'COMPLETED').length,
     failed: allJobs.filter(job => job.status === 'FAILED').length,
-    processing: allJobs.filter(job => job.status === 'PROCESSING' || job.status === 'SCHEDULED').length,
+    processing: allJobs.filter(job => 
+      job.status === 'SCHEDULED' || 
+      job.status === 'PROCESSING' || 
+      job.status === 'ANALYZED' || 
+      job.status === 'AUDIO_GENERATED' || 
+      job.status === 'PROCESSED'
+    ).length,
   };
 
   return (
@@ -252,7 +264,7 @@ export function HistoryManager({ className }: HistoryManagerProps) {
                       <div className="flex items-center space-x-4 text-xs text-gray-500">
                         <span>{new Date(job.createdAt).toLocaleDateString()}</span>
                         <span>{new Date(job.createdAt).toLocaleTimeString()}</span>
-                        {(job.status === 'PROCESSING' || job.status === 'SCHEDULED') && (
+                        {(job.status !== 'COMPLETED' && job.status !== 'FAILED') && (
                           <span className="text-blue-400">{Math.round(job.progress)}%</span>
                         )}
                       </div>

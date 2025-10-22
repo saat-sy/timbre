@@ -45,7 +45,7 @@ def lambda_handler(event, _):
             return create_error_response(403, "Forbidden", "Access denied: Job does not belong to user")
         
         job_instance = Job(
-            job_id=job['job_id'], user_id=job.get('user_id', ''), s3_path=job.get('s3_path', ''),
+            job_id=job['job_id'], user_id=job.get('user_id', ''), s3_url=job.get('s3_url', ''),
             prompts=job.get('prompts', []), status=job.get('status', 'unknown'), operation_type=job.get('operation_type', ''),
             final_url=job.get('final_url', ''), summary=job.get('summary', ''),
             agent_session_id=job.get('agent_session_id', ''),

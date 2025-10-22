@@ -30,6 +30,9 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
           </div>
         );
       case 'PROCESSING':
+      case 'ANALYZED':
+      case 'AUDIO_GENERATED':
+      case 'PROCESSED':
         return (
           <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin"></div>
@@ -60,6 +63,12 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
         return 'Scheduled';
       case 'PROCESSING':
         return 'Processing';
+      case 'ANALYZED':
+        return 'Analyzed';
+      case 'AUDIO_GENERATED':
+        return 'Audio Generated';
+      case 'PROCESSED':
+        return 'Processed';
       case 'COMPLETED':
         return 'Completed';
       case 'FAILED':
@@ -72,6 +81,9 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
       case 'SCHEDULED':
         return 'text-yellow-400';
       case 'PROCESSING':
+      case 'ANALYZED':
+      case 'AUDIO_GENERATED':
+      case 'PROCESSED':
         return 'text-blue-400';
       case 'COMPLETED':
         return 'text-green-400';
@@ -98,7 +110,7 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
             </svg>
             <span>Back to Dashboard</span>
           </button>
-          
+
           <div className="text-sm text-gray-400">
             Job ID: {jobProgress.jobId}
           </div>
@@ -118,15 +130,18 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
                 Job {getStatusText()}
               </h1>
               <p className={`text-lg ${getStatusColor()}`}>
-                {jobProgress.status === 'PROCESSING' && 'Your video is being processed...'}
                 {jobProgress.status === 'SCHEDULED' && 'Your job is queued for processing...'}
+                {jobProgress.status === 'PROCESSING' && 'Your video is being processed...'}
+                {jobProgress.status === 'ANALYZED' && 'Video analysis complete, generating audio...'}
+                {jobProgress.status === 'AUDIO_GENERATED' && 'Audio generated, finalizing video...'}
+                {jobProgress.status === 'PROCESSED' && 'Processing complete, preparing final output...'}
                 {jobProgress.status === 'COMPLETED' && 'Your video has been processed successfully!'}
                 {jobProgress.status === 'FAILED' && 'Processing failed. Please try again.'}
               </p>
             </div>
 
             {/* Progress Bar */}
-            {(jobProgress.status === 'PROCESSING' || jobProgress.status === 'SCHEDULED') && (
+            {(jobProgress.status !== 'COMPLETED' && jobProgress.status !== 'FAILED') && (
               <div className="w-full max-w-md mx-auto space-y-2">
                 <div className="flex justify-between text-sm text-gray-400">
                   <span>Progress</span>
@@ -173,7 +188,7 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
                 >
                   Download Result
                 </GradientButton>
-                
+
                 {jobProgress.summary && (
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 max-w-md mx-auto">
                     <h3 className="text-green-400 font-medium mb-2">Summary</h3>
@@ -195,7 +210,7 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
                   >
                     Start New Job
                   </GradientButton>
-                  
+
                   {jobProgress.isRetryable && (
                     <GradientButton
                       onClick={async () => {
@@ -220,7 +235,7 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
                     </GradientButton>
                   )}
                 </div>
-                
+
                 {retryError && (
                   <button
                     onClick={clearRetryError}
@@ -242,10 +257,10 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
               onClick={() => setShowDetails(!showDetails)}
               className="text-gray-400 hover:text-white transition-colors"
             >
-              <svg 
+              <svg
                 className={`w-5 h-5 transition-transform ${showDetails ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -281,7 +296,7 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
                     {jobProgress.jobId}
                   </code>
                 </div>
-                
+
                 {jobProgress.finalUrl && (
                   <div>
                     <span className="text-gray-400 block mb-1">Result URL:</span>
@@ -301,7 +316,7 @@ export function JobProgressPage({ jobProgress }: JobProgressPageProps) {
         </LiquidGlassCard>
 
         {/* Auto-refresh Notice */}
-        {(jobProgress.status === 'PROCESSING' || jobProgress.status === 'SCHEDULED') && (
+        {(jobProgress.status !== 'COMPLETED' && jobProgress.status !== 'FAILED') && (
           <div className="text-center">
             <p className="text-sm text-gray-400">
               This page will automatically update every 5 seconds

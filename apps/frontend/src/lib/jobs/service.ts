@@ -327,7 +327,16 @@ class JobService {
                 progress = 10;
                 break;
             case 'PROCESSING':
-                progress = 50; // Could be more sophisticated based on sub-steps
+                progress = 25;
+                break;
+            case 'ANALYZED':
+                progress = 50;
+                break;
+            case 'AUDIO_GENERATED':
+                progress = 75;
+                break;
+            case 'PROCESSED':
+                progress = 90;
                 break;
             case 'COMPLETED':
                 progress = 100;
