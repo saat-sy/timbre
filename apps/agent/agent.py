@@ -10,7 +10,7 @@ from utils.utils import validate_api_request
 app = BedrockAgentCoreApp()
 
 agent = Agent(
-    model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+    model="us.amazon.nova-pro-v1:0",
     tools=[transcribe, get_scene_list, describe_image],
     system_prompt=Prompts.get_system_prompt(),
 )

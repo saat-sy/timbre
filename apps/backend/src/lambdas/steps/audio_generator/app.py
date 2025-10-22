@@ -12,12 +12,10 @@ from utils import validate_event, update_field_in_dynamodb
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize AWS clients
 sagemaker_runtime = boto3.client('sagemaker-runtime')
 s3_client = boto3.client('s3')
 dynamodb_resource = boto3.resource('dynamodb')
 
-# Environment variables
 JOBS_TABLE = os.environ['JOBS_TABLE']
 MUSIC_GEN_ENDPOINT_NAME = os.environ['MUSIC_GEN_ENDPOINT_NAME']
 SAGEMAKER_SESSION_BUCKET = os.environ['SAGEMAKER_SESSION_BUCKET']
