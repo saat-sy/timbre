@@ -19,6 +19,9 @@ def _validate_input(video_path):
             raise ValueError(f"S3 object does not exist: {video_path}")
         except Exception as e:
             raise ValueError(f"Error accessing S3 object: {e}")
+    else:
+        if not os.path.isfile(video_path):
+            raise ValueError(f"Local file does not exist: {video_path}")
 
 def _download_s3_file(s3_url):
     """Download S3 file to temporary location"""
@@ -38,7 +41,10 @@ def _download_s3_file(s3_url):
     
 def _process_scene_list(scene_list):
     """Process scene list to return start and end times"""
-    return [{'start': scene[0].get_seconds(), 'end': scene[1].get_seconds()} for scene in scene_list]
+    return [
+        {'start': round(scene[0].get_seconds(), 2), 'end': round(scene[1].get_seconds(), 2)}
+        for scene in scene_list
+    ]
 
 @tool
 def get_scene_list(video_path: str) -> list:
@@ -51,10 +57,9 @@ def get_scene_list(video_path: str) -> list:
     Returns:
         list: A list of scene objects.
     """
-    _validate_input(video_path)
-    
     temp_path = None
     try:
+        _validate_input(video_path)
         if video_path.startswith('s3://'):
             temp_path = _download_s3_file(video_path)
             scene_list = detect(temp_path, AdaptiveDetector())
