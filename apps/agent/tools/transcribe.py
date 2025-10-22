@@ -1,9 +1,11 @@
 from strands import tool
 import boto3
 import uuid
-import time
 import json
-import urllib.request
+import os
+import subprocess
+
+from transcribe_service.assemblyai import get_transcription_from_assemblyai
 
 def _validate_input(video_path):
     """Validate input parameters"""
@@ -19,12 +21,27 @@ def _validate_input(video_path):
             raise ValueError(f"S3 object does not exist: {video_path}")
         except Exception as e:
             raise ValueError(f"Error accessing S3 object: {e}")
-
+        
 def _get_transcription_filename(video_path):
-    """Extract transcription filename from video path"""
-    video_filename = video_path.split('/')[-1]
+    """Generates a transcription filename based on the video filename"""
+    video_filename = video_path.split('/')[-1] 
     base_name = video_filename.rsplit('.', 1)[0]
     return f"{base_name}.json"
+
+def _upload_transcription_to_s3(transcript_data, video_path):
+    """Uploads transcription data to S3"""
+    s3_client = boto3.client('s3')
+    bucket = video_path.split('/')[2]
+    
+    transcription_filename = _get_transcription_filename(video_path)
+    transcription_key = f"transcriptions/{transcription_filename}"
+    
+    s3_client.put_object(
+        Bucket=bucket,
+        Key=transcription_key,
+        Body=json.dumps(transcript_data).encode('utf-8'),
+        ContentType='application/json'
+    )
 
 def _check_existing_transcription(video_path):
     """Check if transcription already exists in S3"""
@@ -40,111 +57,57 @@ def _check_existing_transcription(video_path):
         response = s3_client.get_object(Bucket=bucket, Key=transcription_key)
         transcript_data = json.loads(response['Body'].read().decode())
         
-        return _parse_transcript_data(transcript_data)
+        return transcript_data
         
     except s3_client.exceptions.NoSuchKey:
         return None
     except Exception as e:
         print(f"Warning: Could not read existing transcription: {e}")
         return None
-
-def _parse_transcript_data(transcript_data):
-    """Parse AWS Transcribe response data into structured format"""
-    words = []
-    if 'results' in transcript_data and 'items' in transcript_data['results']:
-        for item in transcript_data['results']['items']:
-            if item['type'] == 'pronunciation':
-                words.append({
-                    'text': item['alternatives'][0]['content'],
-                    'start_time': float(item['start_time']),
-                    'end_time': float(item['end_time']),
-                    'confidence': float(item['alternatives'][0]['confidence'])
-                })
     
-    sentences = []
-    if words:
-        current_sentence = {
-            'words': [],
-            'start_time': words[0]['start_time'],
-            'end_time': words[0]['end_time'],
-            'confidence_sum': 0,
-            'word_count': 0
-        }
-        
-        for word in words:
-            current_sentence['words'].append(word['text'])
-            current_sentence['end_time'] = word['end_time']
-            current_sentence['confidence_sum'] += word['confidence']
-            current_sentence['word_count'] += 1
-            
-            if (word['text'].endswith(('.', '!', '?')) or 
-                len(current_sentence['words']) >= 15):
-                
-                sentences.append({
-                    'text': ' '.join(current_sentence['words']),
-                    'start_time': current_sentence['start_time'],
-                    'end_time': current_sentence['end_time'],
-                    'confidence': current_sentence['confidence_sum'] / current_sentence['word_count'],
-                    'word_count': current_sentence['word_count']
-                })
-                
-                if word != words[-1]:
-                    next_word_idx = words.index(word) + 1
-                    if next_word_idx < len(words):
-                        current_sentence = {
-                            'words': [],
-                            'start_time': words[next_word_idx]['start_time'],
-                            'end_time': words[next_word_idx]['end_time'],
-                            'confidence_sum': 0,
-                            'word_count': 0
-                        }
-        
-        if current_sentence['words']:
-            sentences.append({
-                'text': ' '.join(current_sentence['words']),
-                'start_time': current_sentence['start_time'],
-                'end_time': current_sentence['end_time'],
-                'confidence': current_sentence['confidence_sum'] / current_sentence['word_count'],
-                'word_count': current_sentence['word_count']
-            })
+def _get_converted_audio_from_video(video_path):
+    """Extracts and converts audio from video file to a local temporary file using ffmpeg"""   
+    s3 = boto3.client('s3')
+    temp_video_path = f"/tmp/{uuid.uuid4()}.mp4"
     
-    return {
-        'transcripts': sentences,
-        'full_text': ' '.join([sentence['text'] for sentence in sentences])
-    }
-
-def _wait_for_transcription_completion(transcribe_client, job_name):
-    """Wait for transcription job to complete and return processed results"""
-    max_wait_time = 300
-    start_time = time.time()
+    if video_path.startswith('s3://'):
+        s3_path = video_path[5:]
+        bucket, key = s3_path.split('/', 1)
+        s3.download_file(bucket, key, temp_video_path)
+    else:
+        temp_video_path = video_path
     
-    while True:
-        if time.time() - start_time > max_wait_time:
-            raise Exception(f"Transcription job timed out after 5 minutes")
+    audio_path = f"/tmp/{uuid.uuid4()}.mp3"
+    
+    try:
+        subprocess.run([
+            'ffmpeg', 
+            '-i', temp_video_path,
+            '-vn',
+            '-acodec', 'mp3',
+            '-ab', '192k',
+            '-ar', '44100',
+            '-y',
+            audio_path
+        ], check=True, capture_output=True, text=True)
         
-        response = transcribe_client.get_transcription_job(
-            TranscriptionJobName=job_name
-        )
-        status = response['TranscriptionJob']['TranscriptionJobStatus']
-        
-        if status == 'COMPLETED':
-            transcript_uri = response['TranscriptionJob']['Transcript']['TranscriptFileUri']
-            
-            with urllib.request.urlopen(transcript_uri) as response:
-                transcript_data = json.loads(response.read().decode())
-            
-            return _parse_transcript_data(transcript_data)
-            
-        elif status == 'FAILED':
-            failure_reason = response['TranscriptionJob'].get('FailureReason', 'Unknown error')
-            raise Exception(f"Transcription job failed: {failure_reason}")
-        
-        time.sleep(5)
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"ffmpeg failed to extract audio: {e.stderr}")
+    except FileNotFoundError:
+        raise Exception("ffmpeg not found. Please install ffmpeg on your system.")
+    
+    if video_path.startswith('s3://'):
+        try:
+            os.remove(temp_video_path)
+        except OSError:
+            raise Exception("Warning: Could not delete temporary video file")
+    
+    return audio_path
 
 @tool
-def transcribe(video_path: str) -> dict:
+def transcribe(video_path: str) -> list:
     """
-    Transcribes the audio from a video file using AWS Transcribe.
+    Transcribes the audio from a video file using AssemblyAI.
 
     Args:
         video_path (str): The path to the video file (e.g., 's3://bucket-name/video.mp4').
@@ -158,39 +121,22 @@ def transcribe(video_path: str) -> dict:
     if existing_transcription:
         print(f"Found existing transcription for {video_path}")
         return existing_transcription
-
-    transcribe_client = boto3.client('transcribe')
     
-    job_name = f"transcribe_job_{uuid.uuid4().hex[:8]}"
-    
-    video_filename = video_path.split('/')[-1] 
-    base_name = video_filename.rsplit('.', 1)[0]
-    output_filename = f"{base_name}.json"
-    
+    local_audio_path = None
     try:
-        transcribe_client.start_transcription_job(
-            TranscriptionJobName=job_name,
-            Media={'MediaFileUri': video_path},
-            MediaFormat=video_filename.rsplit('.', 1)[-1],
-            LanguageCode='en-US',
-            Settings={
-                'ShowSpeakerLabels': True,
-                'MaxSpeakerLabels': 10
-            },
-            OutputBucketName=video_path.split('/')[2],
-            OutputKey=f"transcriptions/{output_filename}"
-        )
-        
-        result = _wait_for_transcription_completion(transcribe_client, job_name)
-        
-        transcribe_client.delete_transcription_job(TranscriptionJobName=job_name)
+        local_audio_path = _get_converted_audio_from_video(video_path)
+
+        result = get_transcription_from_assemblyai(local_audio_path)
+
+        _upload_transcription_to_s3(result, video_path)
         
         return result
             
     except Exception as e:
-        try:
-            transcribe_client.delete_transcription_job(TranscriptionJobName=job_name)
-        except:
-            pass
         raise Exception(f"Transcription failed: {str(e)}")
-
+    finally:
+        if local_audio_path and os.path.exists(local_audio_path):
+            try:
+                os.remove(local_audio_path)
+            except OSError:
+                print(f"Warning: Could not delete temporary audio file: {local_audio_path}")

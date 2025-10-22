@@ -38,4 +38,5 @@ yarn-error.log*
 *.pem
 .vscode/
 *.mp4
+*.mp3
 .kiro/
