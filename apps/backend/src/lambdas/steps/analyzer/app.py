@@ -5,6 +5,7 @@ import boto3
 import re
 import os
 import logging
+from decimal import Decimal
 from typing import Optional, Dict, Any
 
 from constants import Constants, EventFields, JobStatus, OperationType
@@ -16,6 +17,19 @@ logger.setLevel(logging.INFO)
 dynamodb_resource = boto3.resource('dynamodb')
 JOBS_TABLE = os.environ['JOBS_TABLE']
 jobs_table = dynamodb_resource.Table(JOBS_TABLE)
+
+def _convert_floats_to_decimal(obj):
+    """
+    Recursively convert float values to Decimal for DynamoDB compatibility.
+    """
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, dict):
+        return {key: _convert_floats_to_decimal(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_floats_to_decimal(item) for item in obj]
+    else:
+        return obj
 
 def _extract_json_from_string(text: str):
     """
@@ -125,6 +139,8 @@ def lambda_handler(event, context):
             plan = _extract_plan(text_content)
         else:
             plan = _extract_plan(agent_result)
+
+        plan = _convert_floats_to_decimal(plan)
 
         update_field_in_dynamodb(
             jobs_table,

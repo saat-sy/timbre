@@ -73,7 +73,7 @@ def _check_existing_transcription(video_path):
         print(f"Warning: Could not read existing transcription: {e}")
         return None
     
-def _get_converted_audio_from_video(video_path):
+def _get_temp_video_path(video_path):
     """Extracts and converts audio from video file to a local temporary file using ffmpeg"""   
     s3 = boto3.client('s3')
     temp_video_path = f"/tmp/{uuid.uuid4()}.mp4"
@@ -85,32 +85,7 @@ def _get_converted_audio_from_video(video_path):
     else:
         temp_video_path = video_path
     
-    audio_path = f"/tmp/{uuid.uuid4()}.mp3"
-    
-    try:
-        subprocess.run([
-            'ffmpeg', 
-            '-i', temp_video_path,
-            '-vn',
-            '-acodec', 'mp3',
-            '-ab', '192k',
-            '-ar', '44100',
-            '-y',
-            audio_path
-        ], check=True, capture_output=True, text=True)
-        
-    except subprocess.CalledProcessError as e:
-        raise Exception(f"ffmpeg failed to extract audio: {e.stderr}")
-    except FileNotFoundError:
-        raise Exception("ffmpeg not found. Please install ffmpeg on your system.")
-    
-    if video_path.startswith('s3://'):
-        try:
-            os.remove(temp_video_path)
-        except OSError:
-            raise Exception("Warning: Could not delete temporary video file")
-    
-    return audio_path
+    return temp_video_path
 
 def _upload_audio(file_path: str) -> str:
     """Uploads audio file to AssemblyAI and returns upload URL."""
@@ -204,9 +179,9 @@ def transcribe(video_path: str) -> list:
     
     local_audio_path = None
     try:
-        local_audio_path = _get_converted_audio_from_video(video_path)
+        temp_video_path = _get_temp_video_path(video_path)
 
-        result = get_transcription_from_assemblyai(local_audio_path)
+        result = get_transcription_from_assemblyai(temp_video_path)
 
         _upload_transcription_to_s3(result, video_path)
         
