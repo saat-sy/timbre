@@ -18,6 +18,8 @@ JOBS_TABLE = os.environ['JOBS_TABLE']
 dynamodb_resource = boto3.resource('dynamodb')
 jobs_table = dynamodb_resource.Table(JOBS_TABLE)
 
+ffmpeg_path = '/opt/bin/ffmpeg'
+
 def _parse_s3_url(s3_url):
     parsed = urlparse(s3_url)
     bucket = parsed.netloc
@@ -53,7 +55,7 @@ def _combine_video_audio(video_file, audio_files, output_file):
         filter_complex.append(f"[0:a]{new_audio_stream}amix=inputs=2:duration=longest[final_audio]")
         
         cmd = [
-            "ffmpeg", "-y"
+            ffmpeg_path, "-y"
         ] + input_args + [
             "-filter_complex", ";".join(filter_complex),
             "-map", "0:v",
@@ -64,7 +66,7 @@ def _combine_video_audio(video_file, audio_files, output_file):
         ]
     else:
         cmd = [
-            "ffmpeg", "-y",
+            ffmpeg_path, "-y",
             "-i", video_file,
             "-c", "copy",
             output_file

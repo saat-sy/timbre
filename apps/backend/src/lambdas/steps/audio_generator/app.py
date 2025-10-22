@@ -160,7 +160,7 @@ def _generate_audio_for_prompts(audio_prompts: List[str], job_id: str) -> List[s
             EndpointName=MUSIC_GEN_ENDPOINT_NAME,
             InputLocation=input_s3_location,
             ContentType="application/json",
-            InvocationTimeoutSeconds=3600
+            InvocationTimeoutSeconds=60
         )
         
         output_location = response.get('OutputLocation')

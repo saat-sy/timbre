@@ -245,3 +245,6 @@ $RECYCLE.BIN/
 auto_scale.ipynb
 
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
+
+# FFmpeg binary layer
+src/layers/ffmpeg_layer/bin/
