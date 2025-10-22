@@ -17,44 +17,45 @@ dynamodb_resource = boto3.resource('dynamodb')
 JOBS_TABLE = os.environ['JOBS_TABLE']
 jobs_table = dynamodb_resource.Table(JOBS_TABLE)
 
-def _extract_json_from_string(text: str) -> Optional[Dict[Any, Any]]:
+def _extract_json_from_string(text: str):
     """
-    Extract JSON from a string that may contain JSON annotations or code blocks.
+    Extract JSON from a string that may contain JSON annotations, code blocks, or mixed content.
     """
     if not text:
         return None
     
-    code_block_pattern = r'```(?:json)?\s*(.*?)\s*```'
-    match = re.search(code_block_pattern, text, re.DOTALL | re.IGNORECASE)
-    if match:
+    try:
+        match = re.search(r'```json\s*(.*?)\s*```', text, re.DOTALL)
+        if not match:
+            print("No JSON block found.")
+            return None
+
+        raw_json = match.group(1)
+
         try:
-            return json.loads(match.group(1).strip())
+            return json.loads(raw_json)
         except json.JSONDecodeError:
             pass
-    
-    try:
-        return json.loads(text.strip())
-    except json.JSONDecodeError:
-        pass
-    
-    return None
 
-def _extract_plan(data: str) -> Dict[Any, Any]:
+        cleaned = raw_json.encode().decode('unicode_escape')
+
+        return json.loads(cleaned)
+
+    except Exception as e:
+        print("Error extracting JSON:", e)
+        return None
+
+def _extract_plan(data: Any) -> list:
     """
     Extract and validate JSON from response data.
-    """
-    if not isinstance(data, str):
-        if isinstance(data, dict):
-            return data
-        data = str(data)
-    
+    """    
     try:
-        logger.info("Extracting JSON from response")
+        logger.info(f"Extracting JSON from response: {data[:500]}...")
         
         extracted_json = _extract_json_from_string(data)
         
         if extracted_json is not None:
-            if isinstance(extracted_json, dict):
+            if isinstance(extracted_json, list):
                 logger.info("Successfully extracted valid JSON")
                 return extracted_json
             else:
@@ -103,6 +104,7 @@ def lambda_handler(event, context):
             {
                 "prompt": prompts[-1],
                 "s3_url": s3_url,
+                "type": operation_type
             }
         ).encode()
 
@@ -113,18 +115,16 @@ def lambda_handler(event, context):
         )
 
         response_body = response['response'].read()
-        
-        if isinstance(response_body, bytes):
-            response_text = response_body.decode('utf-8')
-        else:
-            response_text = str(response_body)
-        
-        logger.info(f"Received response from agent: {response_text[:20]}...")
-        
-        response_body = response['response'].read()
         response_data = json.loads(response_body)
+        
+        logger.info(f"Received response from agent: {response_data}...")
 
-        plan = _extract_plan(response_data["result"])
+        agent_result = response_data["result"]
+        if isinstance(agent_result, dict) and "content" in agent_result:
+            text_content = agent_result["content"][0]["text"] if agent_result["content"] else ""
+            plan = _extract_plan(text_content)
+        else:
+            plan = _extract_plan(agent_result)
 
         update_field_in_dynamodb(
             jobs_table,

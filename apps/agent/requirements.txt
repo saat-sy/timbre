@@ -46,7 +46,7 @@ numpy==2.2.6
 ollama==0.6.0
 openapi-schema-validator==0.6.3
 openapi-spec-validator==0.7.2
-opencv-python==4.12.0.88
+opencv-python-headless==4.12.0.88
 opentelemetry-api==1.38.0
 opentelemetry-instrumentation==0.59b0
 opentelemetry-instrumentation-threading==0.59b0
