@@ -48,3 +48,35 @@ def update_field_in_dynamodb(table, job: str, fields: dict):
 
     except Exception as e:
         raise Exception(f"Failed to update job {job} in DynamoDB: {str(e)}")
+    
+def remove_field_in_dynamodb(table, job: str, field: str):
+    """
+    Remove a specified field from a DynamoDB job item.
+    
+    Args:
+        job (str): The job ID.
+        field (str): The field name to remove.
+
+    Raises:
+        Exception: If the remove operation fails.
+    """
+
+    try:
+        response = table.get_item(Key={'job_id': job})
+        
+        if 'Item' not in response:
+            raise Exception(f"Job {job} not found in DynamoDB")
+        
+        item = response['Item']
+        if field not in item:
+            return
+        
+        table.update_item(
+            Key={'job_id': job},
+            UpdateExpression=f"REMOVE #{field}",
+            ExpressionAttributeNames={f"#{field}": field},
+            ReturnValues='UPDATED_NEW'
+        )
+    except Exception as e:
+        raise Exception(f"Failed to remove field {field} from job {job} in DynamoDB: {str(e)}")
+

@@ -15,7 +15,7 @@ from utils import validate_event, update_field_in_dynamodb
 s3_client = boto3.client('s3')
 
 JOBS_TABLE = os.environ['JOBS_TABLE']
-dynamodb_resource = boto3.client('dynamodb')
+dynamodb_resource = boto3.resource('dynamodb')
 jobs_table = dynamodb_resource.Table(JOBS_TABLE)
 
 def _parse_s3_url(s3_url):
@@ -70,12 +70,12 @@ def _combine_video_audio(video_file, audio_files, output_file):
             output_file
         ]
     
-    logger.info("FFmpeg command:", " ".join(cmd))
+    logger.info(f"FFmpeg command: {' '.join(cmd)}")
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    if result.stderr:
-        raise Exception("FFmpeg stderr: " + result.stderr)
-    if result.stdout:
-        raise Exception("FFmpeg stdout: " + result.stdout)
+    if result.returncode != 0:
+        raise Exception(f"FFmpeg failed with return code {result.returncode}: {result.stderr}")
+    if result.stderr and "error" in result.stderr.lower():
+        logger.warning(f"FFmpeg warnings: {result.stderr}")
 
 def lambda_handler(event, context):
     """
@@ -140,19 +140,5 @@ def lambda_handler(event, context):
         return event
         
     except Exception as e:
-        logger.error(f"Error in AV Operator Lambda: {e}")
-        try:
-            update_field_in_dynamodb(
-                jobs_table,
-                event.get(EventFields.JOB_ID, 'unknown'),
-                {
-                    EventFields.STATUS: JobStatus.FAILED,
-                    EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
-                }
-            )
-            event[EventFields.STATUS] = JobStatus.FAILED
-        except Exception as db_error:
-            logger.error(f"Failed to update job status in DynamoDB: {str(db_error)}")
-        
         raise RuntimeError(f"Audio video process failed: {str(e)}")
     

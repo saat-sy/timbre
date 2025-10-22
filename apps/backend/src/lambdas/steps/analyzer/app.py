@@ -84,18 +84,18 @@ def lambda_handler(event, context):
 
         validate_event(
             event,
-            required_fields=[EventFields.JOB_ID, EventFields.STATUS, EventFields.PROMPT, EventFields.S3_URL, EventFields.OPERATION_TYPE]
+            required_fields=[EventFields.JOB_ID, EventFields.STATUS, EventFields.PROMPTS, EventFields.S3_URL, EventFields.OPERATION_TYPE]
         )
 
         job_id = event.get(EventFields.JOB_ID)
         operation_type = event.get(EventFields.OPERATION_TYPE)
         prompts = event.get(EventFields.PROMPTS)
         s3_url = event.get(EventFields.S3_URL)
+        session = str(uuid.uuid4())
         
-        if operation_type == OperationType.NEW:
-            session = str(uuid.uuid4())
-        else:
-            session = event.get("agent_session_id", "")
+        if operation_type == OperationType.REGENERATE:
+            if event.get(EventFields.AGENT_SESSION_ID):
+                session = event.get(EventFields.AGENT_SESSION_ID)
 
         agent_core_app = boto3.client('bedrock-agentcore', region_name='us-west-2')
 
@@ -124,32 +124,22 @@ def lambda_handler(event, context):
         response_body = response['response'].read()
         response_data = json.loads(response_body)
 
+        plan = _extract_plan(response_data["result"])
+
         update_field_in_dynamodb(
             jobs_table,
             job_id,
             {
                 EventFields.STATUS: JobStatus.ANALYZED,
                 EventFields.AGENT_SESSION_ID: session,
+                EventFields.PLAN: plan,
                 EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
             }
         )
         event[EventFields.AGENT_SESSION_ID] = session
         event[EventFields.STATUS] = JobStatus.ANALYZED
+        event[EventFields.PLAN] = plan
         
-        return _extract_plan(response_data["result"])
-
+        return event
     except Exception as e:
-        try:
-            update_field_in_dynamodb(
-                jobs_table,
-                event.get(EventFields.JOB_ID, 'unknown'),
-                {
-                    EventFields.STATUS: JobStatus.FAILED,
-                    EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
-                }
-            )
-            event[EventFields.STATUS] = JobStatus.FAILED
-        except Exception as db_error:
-            logger.error(f"Failed to update job status in DynamoDB: {str(db_error)}")
-        
         raise RuntimeError(f"Failed to invoke agent runtime: {str(e)}")

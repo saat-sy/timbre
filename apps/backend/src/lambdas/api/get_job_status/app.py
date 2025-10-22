@@ -25,7 +25,6 @@ def lambda_handler(event, _):
     Returns:
         dict: HTTP response with job details or error
     """
-    # Handle CORS preflight requests
     if event.get('httpMethod') == 'OPTIONS':
         return LambdaResponse(200, {}).to_dict()
     

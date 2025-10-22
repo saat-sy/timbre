@@ -4,7 +4,7 @@ import logging
 import json
 from datetime import datetime, timezone
 
-from utils import validate_event, update_field_in_dynamodb
+from utils import validate_event, update_field_in_dynamodb, remove_field_in_dynamodb
 from constants import EventFields, JobStatus, Constants
 
 logger = logging.getLogger()
@@ -24,19 +24,33 @@ def _summarize_generated_content(prompt, plan):
     Returns:
         str: A summary of the content.
     """
-    bedrock_resource = boto3.client('bedrock', region_name='us-east-2')
+    bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-west-2')
     summary_prompt = Constants.get_summary_prompt(prompt, plan)
 
-    response = bedrock_resource.invoke_model(
+    response = bedrock_runtime.invoke_model(
         modelId=Constants.SUMMARY_MODEL,
         body=json.dumps({
-            "prompt": summary_prompt,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": summary_prompt
+                        }
+                    ]
+                }
+            ],
+            "inferenceConfig": {
+                "max_new_tokens": 4096,
+                "temperature": 0.7
+            }
         }),
         contentType='application/json',
         accept='application/json',
     )
 
-    return json.loads(response['body'].read())
+    response_body = json.loads(response['body'].read())
+    return response_body['output']['message']['content'][0]['text']
 
 def lambda_handler(event, _):
     """
@@ -85,6 +99,15 @@ def lambda_handler(event, _):
                     EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
                 }
             )
+
+            remove_field_in_dynamodb(
+                jobs_table,
+                job_id,
+                EventFields.ERROR
+            )
+
+            event[EventFields.STATUS] = JobStatus.COMPLETED
+
         elif status == JobStatus.SCHEDULED:
             logger.info(f"Job {job_id} starting, updating to PROCESSING status")
             update_field_in_dynamodb(
@@ -93,22 +116,8 @@ def lambda_handler(event, _):
                 {EventFields.STATUS: JobStatus.PROCESSING, EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()}
             )
             event[EventFields.STATUS] = JobStatus.PROCESSING
-        elif status == JobStatus.FAILED:
-            logger.info(f"Job {job_id} failed, updating to FAILED status")
-            update_field_in_dynamodb(
-                jobs_table,
-                job_id,
-                {EventFields.STATUS: JobStatus.FAILED, EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()}
-            )
-            event[EventFields.STATUS] = JobStatus.FAILED
         
         return event
     except Exception as e:
         logger.error(f"Error in coordinator lambda: {e}")
-        update_field_in_dynamodb(
-            jobs_table,
-            event.get(EventFields.JOB_ID, 'unknown'),
-            {EventFields.STATUS: JobStatus.FAILED, EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()}
-        )
-        event[EventFields.STATUS] = JobStatus.FAILED
         raise Exception(f"Coordinator Lambda failed: {str(e)}")

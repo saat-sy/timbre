@@ -1,5 +1,5 @@
 class Constants:
-    SUMMARY_MODEL = "amazon.nova-lite-v1:0"
+    SUMMARY_MODEL = "us.amazon.nova-lite-v1:0"
 
     @staticmethod
     def get_summary_prompt(prompt, plan):
@@ -25,6 +25,7 @@ class EventFields:
     AGENT_SESSION_ID = 'agent_session_id'
     PLAN = 'plan'
     UPDATED_AT = 'updated_at'
+    ERROR = 'error'
 
 class JobStatus:
     SCHEDULED = 'SCHEDULED'

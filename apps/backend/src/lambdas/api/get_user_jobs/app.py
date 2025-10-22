@@ -43,7 +43,6 @@ def lambda_handler(event, _):
     Returns:
         dict: HTTP response with jobs list, count, and pagination info
     """
-    # Handle CORS preflight requests
     if event.get('httpMethod') == 'OPTIONS':
         return LambdaResponse(200, {}).to_dict()
     

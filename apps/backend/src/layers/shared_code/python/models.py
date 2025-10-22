@@ -25,7 +25,7 @@ class LambdaResponse:
 class Job:
     job_id: str
     user_id: str
-    s3_path: str
+    s3_url: str
     prompts: list
     status: str
     operation_type: str

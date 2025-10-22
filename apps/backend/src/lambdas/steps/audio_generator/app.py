@@ -281,19 +281,4 @@ def lambda_handler(event, context):
         return event
         
     except Exception as e:
-        logger.error(f"Error in audio generator lambda: {str(e)}")
-        
-        try:
-            update_field_in_dynamodb(
-                jobs_table,
-                event.get(EventFields.JOB_ID, 'unknown'),
-                {
-                    EventFields.STATUS: JobStatus.FAILED,
-                    EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
-                }
-            )
-            event[EventFields.STATUS] = JobStatus.FAILED
-        except Exception as db_error:
-            logger.error(f"Failed to update job status in DynamoDB: {str(db_error)}")
-        
-        raise RuntimeError(f"Audio generation failed: {str(e)}")
+        raise RuntimeError(f"Error in audio generator lambda: {str(e)}")
