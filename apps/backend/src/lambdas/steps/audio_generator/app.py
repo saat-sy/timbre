@@ -292,6 +292,7 @@ def lambda_handler(event, context):
                     EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
                 }
             )
+            event[EventFields.STATUS] = JobStatus.FAILED
         except Exception as db_error:
             logger.error(f"Failed to update job status in DynamoDB: {str(db_error)}")
         

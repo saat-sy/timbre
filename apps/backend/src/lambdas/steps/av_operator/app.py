@@ -39,18 +39,25 @@ def _combine_video_audio(video_file, audio_files, output_file):
         duration = audio["end"] - audio["start"]
         delay = int(audio["start"] * 1000)
         
-        filter_complex.append(f"[{i+1}:a]adelay={delay}|{delay}[delayed{i}]")
+        fade_duration = 0.5
+        filter_complex.append(f"[{i+1}:a]volume=-25dB,afade=t=in:ss=0:d={fade_duration},afade=t=out:st={duration-fade_duration}:d={fade_duration},adelay={delay}|{delay}[delayed{i}]")
     
     if audio_files:
-        mix_inputs = "".join([f"[delayed{i}]" for i in range(len(audio_files))])
-        filter_complex.append(f"{mix_inputs}amix=inputs={len(audio_files)}:duration=longest[mixed]")
+        if len(audio_files) > 1:
+            mix_inputs = "".join([f"[delayed{i}]" for i in range(len(audio_files))])
+            filter_complex.append(f"{mix_inputs}amix=inputs={len(audio_files)}:duration=longest[new_audio]")
+            new_audio_stream = "[new_audio]"
+        else:
+            new_audio_stream = "[delayed0]"
+        
+        filter_complex.append(f"[0:a]{new_audio_stream}amix=inputs=2:duration=longest[final_audio]")
         
         cmd = [
             "ffmpeg", "-y"
         ] + input_args + [
             "-filter_complex", ";".join(filter_complex),
             "-map", "0:v",
-            "-map", "[mixed]",
+            "-map", "[final_audio]",
             "-c:v", "copy",
             "-c:a", "aac",
             output_file
@@ -63,7 +70,12 @@ def _combine_video_audio(video_file, audio_files, output_file):
             output_file
         ]
     
-    subprocess.run(cmd, check=True, capture_output=True)
+    logger.info("FFmpeg command:", " ".join(cmd))
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    if result.stderr:
+        raise Exception("FFmpeg stderr: " + result.stderr)
+    if result.stdout:
+        raise Exception("FFmpeg stdout: " + result.stdout)
 
 def lambda_handler(event, context):
     """
@@ -128,5 +140,19 @@ def lambda_handler(event, context):
         return event
         
     except Exception as e:
-        raise e
+        logger.error(f"Error in AV Operator Lambda: {e}")
+        try:
+            update_field_in_dynamodb(
+                jobs_table,
+                event.get(EventFields.JOB_ID, 'unknown'),
+                {
+                    EventFields.STATUS: JobStatus.FAILED,
+                    EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
+                }
+            )
+            event[EventFields.STATUS] = JobStatus.FAILED
+        except Exception as db_error:
+            logger.error(f"Failed to update job status in DynamoDB: {str(db_error)}")
+        
+        raise RuntimeError(f"Audio video process failed: {str(e)}")
     

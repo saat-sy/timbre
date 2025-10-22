@@ -138,9 +138,18 @@ def lambda_handler(event, context):
         
         return _extract_plan(response_data["result"])
 
-    except ValueError as ve:
-        logger.error(str(ve))
-        raise ve
     except Exception as e:
-        logger.error(f"Failed to invoke agent runtime: {str(e)}")
+        try:
+            update_field_in_dynamodb(
+                jobs_table,
+                event.get(EventFields.JOB_ID, 'unknown'),
+                {
+                    EventFields.STATUS: JobStatus.FAILED,
+                    EventFields.UPDATED_AT: datetime.now(timezone.utc).isoformat()
+                }
+            )
+            event[EventFields.STATUS] = JobStatus.FAILED
+        except Exception as db_error:
+            logger.error(f"Failed to update job status in DynamoDB: {str(db_error)}")
+        
         raise RuntimeError(f"Failed to invoke agent runtime: {str(e)}")
