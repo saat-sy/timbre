@@ -40,3 +40,9 @@ yarn-error.log*
 *.mp4
 *.mp3
 .kiro/
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
+template.yaml
+!template.yaml.sample

@@ -263,6 +263,8 @@ Resources:
       Policies:
       - DynamoDBCrudPolicy:
           TableName: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
 
   # Analyzer
   AnalyzerFunction:
@@ -271,12 +273,15 @@ Resources:
       CodeUri: src/lambdas/steps/analyzer/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Timeout: 300
       Environment:
         Variables:
           JOBS_TABLE: !Ref JobsTable
       Policies:
       - DynamoDBCrudPolicy:
           TableName: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
 
   # Audio Generator
   AudioGeneratorFunction:
@@ -285,12 +290,15 @@ Resources:
       CodeUri: src/lambdas/steps/audio_generator/
       Handler: app.lambda_handler
       Runtime: python3.13
+      Timeout: 900
       Environment:
         Variables:
           JOBS_TABLE: !Ref JobsTable
       Policies:
       - DynamoDBCrudPolicy:
           TableName: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
 
   # AV Operator
   AVOperatorFunction:
@@ -312,6 +320,30 @@ Resources:
         Variables:
           BUCKET_NAME: !Ref UploadsBucket
           JOBS_TABLE: !Ref JobsTable
+      Layers:
+        - !Ref SharedCodeLayer
+
+  # Failure Handler
+  FailureHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/steps/failure_handler/
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - S3ReadPolicy:
+            BucketName: !Ref UploadsBucket
+        - S3WritePolicy:
+            BucketName: !Ref UploadsBucket
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+          BUCKET_NAME: !Ref UploadsBucket
+      Layers:
+        - !Ref SharedCodeLayer
 
   # Orchestration
   TimbreStateMachine:
@@ -323,6 +355,7 @@ Resources:
         AnalyzerFunctionArn: !GetAtt AnalyzerFunction.Arn
         AudioGeneratorFunctionArn: !GetAtt AudioGeneratorFunction.Arn
         AudioVideoOpsFunctionArn: !GetAtt AVOperatorFunction.Arn
+        FailureHandlerFunctionArn: !GetAtt FailureHandlerFunction.Arn
       Policies:
         - LambdaInvokePolicy:
             FunctionName: !Ref CoordinatorFunction
@@ -332,6 +365,8 @@ Resources:
             FunctionName: !Ref AudioGeneratorFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AVOperatorFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref FailureHandlerFunction
 
   SharedCodeLayer:
     Type: AWS::Serverless::LayerVersion
