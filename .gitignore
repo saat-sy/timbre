@@ -46,3 +46,7 @@ yarn-error.log*
 samconfig.toml
 template.yaml
 !template.yaml.sample
+
+# drawio
+*.drawio
+*.drawio.bak
