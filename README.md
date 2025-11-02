@@ -32,17 +32,9 @@ End-to-end pipeline that transforms any video into a soundtrack-enhanced version
 
 Three-tier serverless architecture on AWS:
 
-### Frontend
-Next.js 14 application with Cognito authentication and real-time job tracking.
-**Details**: [Frontend Documentation](./docs/frontend.md)
-
-### Backend  
-Step Functions pipeline orchestrating Lambda microservices for async processing.
-**Details**: [Backend Documentation](./docs/architecture.md)
-
-### Agent
-AWS Bedrock agent using ReAct pattern for intelligent video analysis coordination.
-**Details**: [Agent Documentation](./docs/agent.md)
+- **Frontend**: Next.js 14 with Cognito auth and real-time job tracking ([docs/frontend.md](./docs/frontend.md))
+- **Backend**: Step Functions orchestrating Lambda microservices ([docs/architecture.md](./docs/architecture.md))
+- **Agent**: Bedrock agent using ReAct pattern for video analysis ([docs/agent.md](./docs/agent.md))
 
 ## Project Structure
 
