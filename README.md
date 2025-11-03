@@ -2,19 +2,6 @@
 
 AI-powered video soundtrack generation using multimodal analysis and serverless orchestration.
 
-## Deployment Status
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Authentication** | ✅ Deployed | Cognito User Pools and JWT validation |
-| **Bedrock Agent** | ✅ Deployed | Agent runtime with multimodal tools |
-| **Step Functions** | ✅ Deployed | Workflow orchestration pipeline |
-| **Lambda Functions** | ✅ Deployed | API endpoints and processing steps |
-| **SageMaker Model** | ❌ Not Deployed | MusicGen Large endpoint required |
-| **Frontend Application** | ❌ Not Deployed | Next.js app pending deployment |
-
-*Core backend infrastructure is live, audio generation pending SageMaker setup*
-
 ## Overview
 
 Serverless pipeline that analyzes video content and generates custom soundtracks through:
@@ -65,6 +52,17 @@ docs/
 ├── architecture.md    # Backend architecture  
 └── agent.md           # Agent design
 ```
+
+## Deployment Status
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Authentication** | ✅ Deployed | Cognito User Pools and JWT validation |
+| **Bedrock Agent** | ✅ Deployed | Agent runtime with multimodal tools |
+| **Step Functions** | ✅ Deployed | Workflow orchestration pipeline |
+| **Lambda Functions** | ✅ Deployed | API endpoints and processing steps |
+| **SageMaker Model** | ❌ Not Deployed | MusicGen Large endpoint required |
+| **Frontend Application** | ❌ Not Deployed | Next.js app pending deployment |
 
 ### Processing Reality
 
