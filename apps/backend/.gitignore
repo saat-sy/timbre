@@ -58,3 +58,11 @@ profile_default/
 # macOS / Windows system files
 .DS_Store
 Thumbs.db
+
+# Logs and databases
+*.log
+logs/
+
+# Tests
+test_output/
+main_test.py
