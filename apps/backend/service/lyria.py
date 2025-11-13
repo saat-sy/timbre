@@ -13,18 +13,18 @@ import json
 load_dotenv()
 logger = get_logger(__name__)
 
+
 class LyriaService:
     def __init__(self, user_websocket: WebSocket) -> None:
         logger.info("Initializing LyriaService")
         self.user_websocket = user_websocket
-        self.model = 'models/lyria-realtime-exp'
+        self.model = "models/lyria-realtime-exp"
         self.BUFFER_SECONDS = 1.0
 
         if not os.getenv("GOOGLE_API_KEY"):
             raise ValueError("GOOGLE_API_KEY not found in environment variables")
         self.client = genai.Client(
-            api_key=os.getenv("GOOGLE_API_KEY"),
-            http_options={'api_version': 'v1alpha'}
+            api_key=os.getenv("GOOGLE_API_KEY"), http_options={"api_version": "v1alpha"}
         )
         self.config = types.LiveMusicGenerationConfig()
         logger.info("LyriaService initialized successfully")
@@ -35,11 +35,11 @@ class LyriaService:
             while True:
                 message = await self.user_websocket.receive_text()
                 logger.info("Received command from client: %s", message)
-                
+
                 try:
                     command = json.loads(message)
                     logger.info("Parsed JSON command: %s", command)
-                    
+
                     logger.info("Processing commands")
                     if command.get(Commands.COMMAND):
                         if command[Commands.COMMAND] == Commands.PLAY:
@@ -58,11 +58,14 @@ class LyriaService:
                     if command.get(Commands.BPM):
                         bpm_value = int(command[Commands.BPM])
                         if bpm_value < 30 or bpm_value > 300:
-                            logger.warning("BPM value %d is outside recommended range (30-300)", bpm_value)
+                            logger.warning(
+                                "BPM value %d is outside recommended range (30-300)",
+                                bpm_value,
+                            )
                         self.config.bpm = bpm_value
                         logger.info("Updated BPM to %d", self.config.bpm)
                         config_updated = True
-                    
+
                     if command.get(Commands.SCALE):
                         scale = command[Commands.SCALE]
                         found_scale_enum_member = None
@@ -71,12 +74,18 @@ class LyriaService:
                                 found_scale_enum_member = scale_member
                                 break
                         if found_scale_enum_member:
-                            logger.info("Setting scale to %s, which requires resetting context.", found_scale_enum_member.name)
+                            logger.info(
+                                "Setting scale to %s, which requires resetting context.",
+                                found_scale_enum_member.name,
+                            )
                             self.config.scale = found_scale_enum_member
                             config_updated = True
                         else:
-                            logger.warning("Error: Matching enum for scale change not found for scale: %s", scale)
-                    
+                            logger.warning(
+                                "Error: Matching enum for scale change not found for scale: %s",
+                                scale,
+                            )
+
                     if config_updated:
                         await session.set_music_generation_config(config=self.config)
                         await session.reset_context()
@@ -87,11 +96,20 @@ class LyriaService:
                         prompt_text = command[Commands.PROMPT]
                         weight = float(command.get(Commands.WEIGHT, 1.0))
                         if weight < 0.0 or weight > 10.0:
-                            logger.warning("Weight value %.2f is outside recommended range (0.0-10.0)", weight)
+                            logger.warning(
+                                "Weight value %.2f is outside recommended range (0.0-10.0)",
+                                weight,
+                            )
                         await session.set_weighted_prompts(
-                            prompts=[types.WeightedPrompt(text=prompt_text, weight=weight)]
+                            prompts=[
+                                types.WeightedPrompt(text=prompt_text, weight=weight)
+                            ]
                         )
-                        logger.info("Updated prompt to '%s' with weight %.2f", prompt_text, weight)
+                        logger.info(
+                            "Updated prompt to '%s' with weight %.2f",
+                            prompt_text,
+                            weight,
+                        )
 
                 except json.JSONDecodeError as e:
                     logger.error("Failed to parse JSON message: %s", e)
@@ -109,7 +127,7 @@ class LyriaService:
     async def _proxy_audio_to_client(self, session: AsyncMusicSession) -> None:
         logger.info("Audio proxy loop started. Streaming audio to client.")
         try:
-            chunks_count = 0            
+            chunks_count = 0
             async for message in session.receive():
                 chunks_count += 1
                 if chunks_count == 1:
@@ -131,7 +149,7 @@ class LyriaService:
             logger.error(f"UNEXPECTED audio loop error: {e}", exc_info=True)
         finally:
             logger.info("Audio loop has fully ended.")
-    
+
     async def start_session(self, lyria_config: LyriaConfig) -> None:
         logger.info("Starting Lyria session with config: %s", lyria_config)
         try:
@@ -142,7 +160,11 @@ class LyriaService:
             async with self.client.aio.live.music.connect(model=self.model) as session:
                 logger.info("Lyria session connected")
                 await session.set_weighted_prompts(
-                    prompts=[types.WeightedPrompt(text=lyria_config.prompt, weight=lyria_config.weight)]
+                    prompts=[
+                        types.WeightedPrompt(
+                            text=lyria_config.prompt, weight=lyria_config.weight
+                        )
+                    ]
                 )
                 await session.set_music_generation_config(config=self.config)
 
@@ -152,16 +174,20 @@ class LyriaService:
                 logger.info("Starting send and receive tasks")
                 send_task = asyncio.create_task(self._proxy_commands_to_lyria(session))
                 receive_task = asyncio.create_task(self._proxy_audio_to_client(session))
-                
+
                 try:
-                    await asyncio.gather(send_task, receive_task, return_exceptions=True)
+                    await asyncio.gather(
+                        send_task, receive_task, return_exceptions=True
+                    )
                 except Exception as e:
                     logger.error("Error in session tasks: %s", e)
                     if not send_task.done():
                         send_task.cancel()
                     if not receive_task.done():
                         receive_task.cancel()
-                    await asyncio.gather(send_task, receive_task, return_exceptions=True)
+                    await asyncio.gather(
+                        send_task, receive_task, return_exceptions=True
+                    )
 
         except Exception as e:
             logger.error("Error in Lyria session: %s", e, exc_info=True)
