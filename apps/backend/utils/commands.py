@@ -1,5 +1,6 @@
 class Commands:
     PLAY = "START"
+    PLAYING = "PLAYING"
     PAUSE = "PAUSE"
     STOP = "STOP"
     COMMAND = "command"

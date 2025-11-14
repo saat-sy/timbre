@@ -128,6 +128,7 @@ class LyriaService:
         logger.info("Audio proxy loop started. Streaming audio to client.")
         try:
             chunks_count = 0
+            first_chunk_sent = False
             async for message in session.receive():
                 chunks_count += 1
                 if chunks_count == 1:
@@ -135,6 +136,10 @@ class LyriaService:
                 if message.server_content and message.server_content.audio_chunks:
                     audio_data = message.server_content.audio_chunks[0].data
                     if audio_data:
+                        if not first_chunk_sent:
+                            await self.user_websocket.send_text(Commands.PLAYING)
+                            logger.info("Sent playing message to client")
+                            first_chunk_sent = True
                         await self.user_websocket.send_bytes(audio_data)
                     else:
                         logger.info("Received audio chunk with no data.")
@@ -172,22 +177,31 @@ class LyriaService:
                 await session.play()
 
                 logger.info("Starting send and receive tasks")
-                send_task = asyncio.create_task(self._proxy_commands_to_lyria(session))
-                receive_task = asyncio.create_task(self._proxy_audio_to_client(session))
-
+                send_task = None
+                receive_task = None
                 try:
+                    send_task = asyncio.create_task(self._proxy_commands_to_lyria(session))
+                    receive_task = asyncio.create_task(self._proxy_audio_to_client(session))
+
                     await asyncio.gather(
                         send_task, receive_task, return_exceptions=True
                     )
                 except Exception as e:
                     logger.error("Error in session tasks: %s", e)
-                    if not send_task.done():
+                    if send_task and not send_task.done():
                         send_task.cancel()
-                    if not receive_task.done():
+                    if receive_task and not receive_task.done():
                         receive_task.cancel()
-                    await asyncio.gather(
-                        send_task, receive_task, return_exceptions=True
-                    )
+                    if send_task and receive_task:
+                        await asyncio.gather(
+                            send_task, receive_task, return_exceptions=True
+                        )
+                finally:
+                    if send_task and not send_task.done():
+                        send_task.cancel()
+                    if receive_task and not receive_task.done():
+                        receive_task.cancel()
+                    logger.info("Lyria session tasks cleaned up")
 
         except Exception as e:
             logger.error("Error in Lyria session: %s", e, exc_info=True)

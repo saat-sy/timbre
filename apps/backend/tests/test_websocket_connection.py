@@ -1,3 +1,7 @@
+"""
+From test observations, we can conclude that Lyria sends 2 second chunks of audio every 2 seconds.
+"""
+
 import asyncio
 import json
 import time
@@ -24,7 +28,7 @@ SAMPLE_WIDTH = 2
 class AudioStreamTester:
     def __init__(self):
         self.audio_data = []
-        self.start_time = None
+        self.start_time: Optional[float] = None
 
         OUTPUT_DIR.mkdir(exist_ok=True)
 
@@ -54,17 +58,32 @@ class AudioStreamTester:
                 await websocket.send(json.dumps(config_message))
                 print("Sent configuration to server")
 
-                self.start_time = time.time()
+                playing_message_received = False
+                print("Waiting for PLAYING message from server...")
 
                 try:
                     while True:
-                        elapsed = time.time() - self.start_time
-                        if elapsed >= TEST_DURATION:
-                            print(f"Test duration ({TEST_DURATION}s) reached")
-                            break
-
                         try:
                             data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
+
+                            if isinstance(data, str) and data == "PLAYING" and not playing_message_received:
+                                playing_message_received = True
+                                print("✓ PLAYING message received from server!")
+                                self.start_time = time.time()
+                                continue
+
+                            if not playing_message_received:
+                                if isinstance(data, str):
+                                    print(f"Received message before PLAYING: {data}")
+                                continue
+
+                            if self.start_time is not None:
+                                elapsed = time.time() - self.start_time
+                                if elapsed >= TEST_DURATION:
+                                    print(f"Test duration ({TEST_DURATION}s) reached")
+                                    break
+                            else:
+                                elapsed = 0
 
                             if isinstance(data, bytes):
                                 self.audio_data.append(data)
@@ -78,9 +97,16 @@ class AudioStreamTester:
                                 print(f"\nReceived message: {data}")
 
                         except asyncio.TimeoutError:
-                            print(
-                                f"\nWarning: No data received for 1 second (elapsed: {elapsed:.1f}s)"
-                            )
+                            if not playing_message_received:
+                                print("Still waiting for PLAYING message...")
+                            else:
+                                if self.start_time is not None:
+                                    elapsed = time.time() - self.start_time
+                                    print(
+                                        f"\nWarning: No data received for 1 second (elapsed: {elapsed:.1f}s)"
+                                    )
+                                else:
+                                    print("\nWarning: No data received for 1 second")
                             continue
 
                 except ConnectionClosed:
