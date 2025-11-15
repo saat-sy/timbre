@@ -1,6 +1,7 @@
 from typing import List
 from models.chat_message_config import ChatMessageConfig, Role
 
+
 # TODO: Implement summarization of the chat history to manage context length and increase speed.
 class ChatHistory:
     def __init__(self) -> None:

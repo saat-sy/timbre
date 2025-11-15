@@ -11,5 +11,7 @@ class LLMUtils:
     def generate_global_context(self, transcript: str, image: bytes) -> GlobalConfig:
         pass
 
-    def generate_realtime_context(self, transcript: str, image: bytes) -> RealtimeConfig:
+    def generate_realtime_context(
+        self, transcript: str, image: bytes
+    ) -> RealtimeConfig:
         pass
