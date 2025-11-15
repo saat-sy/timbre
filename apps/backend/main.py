@@ -1,8 +1,19 @@
 import json
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import Dict, Any
+from fastapi import (
+    FastAPI,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+    HTTPException,
+    File,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from google.genai import types
+from service.global_eval.global_eval_service import GlobalEvalService
 from service.lyria.lyria_service import LyriaService
 from models.lyria_config import LyriaConfig
 from shared.commands import Commands
@@ -19,6 +30,77 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/api/context")
+async def get_context(
+    file: UploadFile = File(
+        ..., description="MP4 video file to analyze", media_type="video/mp4"
+    )
+) -> Dict[str, Any]:
+    logger.info("Processing video file for global context extraction")
+
+    if not file or not file.filename:
+        logger.error("No video file provided in request")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Video file is required"
+        )
+
+    if file.content_type not in ["video/mp4", "video/mpeg"]:
+        logger.error(f"Invalid file type: {file.content_type}")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only MP4 video files are supported",
+        )
+
+    if file.size and file.size > 50 * 1024 * 1024:
+        logger.error(f"File size too large: {file.size} bytes")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Video file size must be less than 50MB",
+        )
+
+    try:
+        video_content = await file.read()
+
+        if not video_content:
+            logger.error("Failed to read video content or file is empty")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to read video file or file is empty",
+            )
+
+        try:
+            global_context_service = GlobalEvalService(video=video_content)
+            config = global_context_service.evaluate()
+
+            if not config:
+                logger.error("Global evaluation service returned empty configuration")
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Unable to extract context from video file",
+                )
+
+            logger.info(
+                f"Successfully extracted context for video file: {file.filename}"
+            )
+            return config.dict()
+
+        except Exception as service_error:
+            logger.error(f"Global evaluation service error: {service_error}")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Failed to process video file. The video may be corrupted or in an unsupported format.",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error processing video file: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing the video file",
+        )
 
 
 @app.websocket("/ws/music")

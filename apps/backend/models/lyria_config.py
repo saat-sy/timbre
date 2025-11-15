@@ -8,3 +8,11 @@ class LyriaConfig:
     bpm: int
     scale: types.Scale
     weight: float = 1.0
+
+    def dict(self):
+        return {
+            "prompt": self.prompt,
+            "bpm": self.bpm,
+            "scale": self.scale.name,
+            "weight": self.weight,
+        }

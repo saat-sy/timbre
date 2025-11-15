@@ -66,7 +66,11 @@ class AudioStreamTester:
                         try:
                             data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
 
-                            if isinstance(data, str) and data == "PLAYING" and not playing_message_received:
+                            if (
+                                isinstance(data, str)
+                                and data == "PLAYING"
+                                and not playing_message_received
+                            ):
                                 playing_message_received = True
                                 print("✓ PLAYING message received from server!")
                                 self.start_time = time.time()

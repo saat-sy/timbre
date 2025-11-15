@@ -180,8 +180,12 @@ class LyriaService:
                 send_task = None
                 receive_task = None
                 try:
-                    send_task = asyncio.create_task(self._proxy_commands_to_lyria(session))
-                    receive_task = asyncio.create_task(self._proxy_audio_to_client(session))
+                    send_task = asyncio.create_task(
+                        self._proxy_commands_to_lyria(session)
+                    )
+                    receive_task = asyncio.create_task(
+                        self._proxy_audio_to_client(session)
+                    )
 
                     await asyncio.gather(
                         send_task, receive_task, return_exceptions=True
