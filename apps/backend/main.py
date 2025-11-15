@@ -3,10 +3,10 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from google.genai import types
-from service.lyria import LyriaService
+from service.lyria.lyria_service import LyriaService
 from models.lyria_config import LyriaConfig
-from utils.commands import Commands
-from utils.logging import get_logger
+from shared.commands import Commands
+from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
