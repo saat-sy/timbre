@@ -6,7 +6,7 @@ from dataclasses import dataclass
 class LyriaConfig:
     prompt: str
     bpm: int
-    scale: types.Scale
+    scale: str
     weight: float = 1.0
 
     def dict(self):
