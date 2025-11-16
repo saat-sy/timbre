@@ -14,7 +14,19 @@ logger = get_logger(__name__)
 class VideoUtils:
     def __init__(self, video: bytes) -> None:
         self.video = video
-        self._create_temp_video_file()
+
+    def get_unique_frames(self) -> list[Frame]:
+        try:
+            self._create_temp_video_file()
+            self._extract_scenes_from_video()
+            best_frames = self._pick_best_frame_from_scene()
+            unique_frames = self._deduplicate_frames(best_frames)
+            return unique_frames
+        except Exception as e:
+            logger.error(f"Error in get_unique_frames: {e}")
+            return []
+        finally:
+            self._cleanup_temp_video_file()
 
     def _pick_best_frame_from_scene(self) -> list[Frame]:
         logger.info("Picking best frames from scenes")

@@ -68,3 +68,6 @@ test_output/
 
 # Research
 research/
+
+# Test cache
+.pytest_cache/
