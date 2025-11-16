@@ -7,6 +7,7 @@ from scenedetect import detect, ContentDetector
 from PIL import Image
 from models.frame import Frame
 from shared.logging import get_logger
+from utils.helper.helper_utils import HelperUtils
 
 logger = get_logger(__name__)
 
@@ -14,10 +15,11 @@ logger = get_logger(__name__)
 class VideoUtils:
     def __init__(self, video: bytes) -> None:
         self.video = video
+        self.helper_utils = HelperUtils()
 
     def get_unique_frames(self) -> list[Frame]:
         try:
-            self._create_temp_video_file()
+            self.temp_video_path = self.helper_utils.create_temp_file(video=self.video)
             self._extract_scenes_from_video()
             best_frames = self._pick_best_frame_from_scene()
             unique_frames = self._deduplicate_frames(best_frames)
@@ -26,7 +28,7 @@ class VideoUtils:
             logger.error(f"Error in get_unique_frames: {e}")
             return []
         finally:
-            self._cleanup_temp_video_file()
+            self.helper_utils.cleanup_temp_file(self.temp_video_path)
 
     def _pick_best_frame_from_scene(self) -> list[Frame]:
         logger.info("Picking best frames from scenes")
@@ -131,19 +133,3 @@ class VideoUtils:
         self.scenes = []
         for scene_start, scene_end in scene_list:
             self.scenes.append((scene_start.get_seconds(), scene_end.get_seconds()))
-
-    def _create_temp_video_file(self) -> None:
-        logger.info("Creating temporary video file")
-        timestamp = int(time.time() * 1000)
-        self.temp_video_path = f"/tmp/temp_video_{timestamp}.mp4"
-        with open(self.temp_video_path, "wb") as temp_video_file:
-            temp_video_file.write(self.video)
-        logger.info(f"Temporary video file created at {self.temp_video_path}")
-
-    def _cleanup_temp_video_file(self) -> None:
-        logger.info("Cleaning up temporary video file")
-        try:
-            os.remove(self.temp_video_path)
-            logger.info(f"Temporary video file {self.temp_video_path} removed")
-        except Exception as e:
-            logger.error(f"Error removing temporary video file: {e}")
