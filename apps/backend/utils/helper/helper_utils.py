@@ -4,6 +4,7 @@ from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 class HelperUtils:
     def create_temp_file(self, video: bytes) -> str:
         logger.info("Creating temporary video file")
