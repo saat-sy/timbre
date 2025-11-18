@@ -1,4 +1,4 @@
-from models.global_config import GlobalConfig
+from models.llm_response import LLMResponse
 from shared.logging import get_logger
 from utils.audio.audio_utils import AudioUtils
 from utils.helper.helper_utils import HelperUtils
@@ -16,7 +16,7 @@ class GlobalEvalService:
         self.llm_utils = LLMUtils()
         self.helper_utils = HelperUtils()
 
-    def evaluate(self) -> GlobalConfig:
+    def evaluate(self) -> LLMResponse:
         pass
 
     def _get_collage_from_video(self, transcript: str) -> any:

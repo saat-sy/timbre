@@ -13,6 +13,6 @@ class LyriaConfig:
         return {
             "prompt": self.prompt,
             "bpm": self.bpm,
-            "scale": self.scale.name,
+            "scale": self.scale,
             "weight": self.weight,
         }

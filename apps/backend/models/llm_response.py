@@ -3,7 +3,7 @@ from models.lyria_config import LyriaConfig
 
 
 @dataclass
-class GlobalConfig:
+class LLMResponse:
     lyria_config: LyriaConfig
     context: str
     transcription: str

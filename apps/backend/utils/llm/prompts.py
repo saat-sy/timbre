@@ -15,7 +15,18 @@ LYRIA REALTIME PROMPTING GUIDELINES:
 TRANSCRIPTION AND KEYFRAMES:
 {transcription}
 
-EXAMPLE OUTPUT:
+OUTPUT RULES:
+- ALWAYS include "context" field with explanation of the video analysis
+- If this is NOT the final chunk: Return full JSON with lyria_config and context
+- If this IS the final chunk: Return ONLY lyria_config and context fields (same structure, but marks completion)
+
+OUTPUT (JSON only):
+If NOT final chunk:
+{
+  "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last."
+}
+
+If IS final chunk:
 {
   "lyria_config": {
     "prompt": "The single best musical prompt (genre, mood, instruments) that should play at the *start* of the video.",
@@ -23,7 +34,43 @@ EXAMPLE OUTPUT:
     "scale": "The single best musical scale for the entire video.",
     "weight": 1.0
   },
-  "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last.",
+  "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last."
+}
+
+Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any explanatory text, markdown, or apologies before or after the JSON.
+"""
+
+    REALTIME_CONTEXT_PROMPT = """You are a real-time music adaptation AI. Analyze the next 10 seconds of video content and decide if the music should change.
+
+GLOBAL CONTEXT: {global_context}
+
+DECISION CRITERIA:
+- Scene transitions (location, mood, action intensity)
+- Dialogue vs action vs silence
+- Emotional shifts or narrative beats
+- Visual rhythm changes
+
+MUSIC GUIDELINES:
+- Be descriptive: Use mood + genre + instruments (e.g., "Ominous drone, unsettling pads", "Upbeat, funky, tight groove, clavichord")
+- Instruments: 303 Acid Bass, 808 Hip Hop Beat, Accordion, Alto Saxophone, Bagpipes, Banjo, Bass Clarinet, Cello, Charango, Clavichord, Didgeridoo, Drumline, Flamenco Guitar, Guitar, Harmonica, Harp, Kalimba, Mandolin, Marimba, Piano, Rhodes Piano, Sitar, Steel Drum, Synth Pads, Tabla, Trumpet, Vibraphone
+- Genres: Acid Jazz, Afrobeat, Baroque, Bluegrass, Blues Rock, Bossa Nova, Celtic Folk, Chillout, Classic Rock, Deep House, Disco Funk, Dubstep, EDM, Electro Swing, Funk Metal, Indie Folk, Jazz Fusion, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance
+- Moods: Acoustic, Ambient, Bright Tones, Chill, Danceable, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Live Performance, Lo-fi, Ominous, Psychedelic, Saturated Tones, Upbeat, Virtuoso
+
+Only change music when there's a significant shift that warrants it.
+
+TRANSCRIPTION: {transcription}
+
+OUTPUT (JSON only):
+{
+  "lyria_config": {
+    "prompt": "New music description (or null if no change)",
+    "bpm": integer_between_60_200,
+    "scale": "musical_scale",
+    "weight": 1.0
+  } || null,
+  "context": "Brief explanation of this 10-second segment",
+  "change_music": boolean,
+  "change_music_at": timestamp_in_seconds || null
 }
 
 Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any explanatory text, markdown, or apologies before or after the JSON.
@@ -32,3 +79,11 @@ Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any ex
     @staticmethod
     def get_global_context_prompt(transcription: dict) -> str:
         return Prompts.GLOBAL_CONTEXT_PROMPT.format(transcription=transcription)
+    
+    @staticmethod
+    def get_realtime_context_prompt(transcription: str, global_context: str) -> str:
+        return Prompts.REALTIME_CONTEXT_PROMPT.format(transcription=transcription, global_context=global_context)
+    
+    @staticmethod
+    def get_realtime_segment_prompt(duration_start: float, duration_end: float) -> str:
+        return f"Analyze the video segment from {duration_start} seconds to {duration_end} seconds."
