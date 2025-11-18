@@ -1,7 +1,10 @@
 import pytest
 import cv2
 import numpy as np
+import base64
 from unittest.mock import Mock, patch, mock_open
+from PIL import Image
+from io import BytesIO
 
 from utils.video.video_utils import VideoUtils
 from models.frame import Frame
@@ -17,6 +20,22 @@ def mock_frame_data():
     img = np.zeros((100, 100, 3), dtype=np.uint8)
     _, buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
     return buffer.tobytes()
+
+
+@pytest.fixture
+def mock_base64_frame_data():
+    """Create a base64-encoded frame data for testing."""
+    img = np.zeros((100, 100, 3), dtype=np.uint8)
+    _, buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    return base64.b64encode(buffer.tobytes()).decode('utf-8')
+
+
+@pytest.fixture
+def mock_base64_frame_data_different():
+    """Create a different base64-encoded frame data for testing."""
+    img = np.ones((100, 100, 3), dtype=np.uint8) * 255  # White image
+    _, buffer = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    return base64.b64encode(buffer.tobytes()).decode('utf-8')
 
 
 @pytest.fixture
@@ -72,13 +91,20 @@ class TestVideoUtils:
         ) as mock_lap, patch(
             "utils.video.video_utils.cv2.imencode",
             return_value=(True, np.frombuffer(mock_frame_data, dtype=np.uint8)),
-        ):
+        ) as mock_imencode, patch(
+            "utils.video.video_utils.base64.b64encode"
+        ) as mock_b64encode:
 
             mock_gray = np.zeros((100, 100), dtype=np.uint8)
             mock_cvt.return_value = mock_gray
             mock_laplacian = Mock()
             mock_laplacian.var.return_value = 100.0
             mock_lap.return_value = mock_laplacian
+            
+            # Mock the base64 encoding process
+            mock_encoded_bytes = Mock()
+            mock_encoded_bytes.decode.return_value = "base64_encoded_string"
+            mock_b64encode.return_value = mock_encoded_bytes
 
             video_utils.temp_video_path = "/tmp/test.mp4"
             video_utils.scenes = [(0.0, 1.0)]
@@ -86,7 +112,9 @@ class TestVideoUtils:
 
             assert len(result) == 1
             assert isinstance(result[0], Frame)
+            assert result[0].data == "base64_encoded_string"  # Verify base64 encoding
             mock_cap.release.assert_called_once()
+            mock_b64encode.assert_called()  # Verify base64.b64encode was called
 
     @patch("utils.video.video_utils.cv2.VideoCapture")
     def test_pick_best_frame_no_valid_frames(self, mock_cv2_cap, video_utils):
@@ -102,24 +130,61 @@ class TestVideoUtils:
         assert result == []
         mock_cap.release.assert_called_once()
 
-    def test_deduplicate_frames_no_duplicates(self, video_utils, mock_frame_data):
-        frame1 = Frame(data=mock_frame_data, timestamp=1.0)
-        frame2 = Frame(data=mock_frame_data, timestamp=2.0)
+    def test_deduplicate_frames_no_duplicates(self, video_utils, mock_base64_frame_data, mock_base64_frame_data_different):
+        """Test deduplication with non-duplicate base64 frames."""
+        frame1 = Frame(data=mock_base64_frame_data, timestamp=1.0)
+        frame2 = Frame(data=mock_base64_frame_data_different, timestamp=2.0)
 
         with patch.object(video_utils, "_calculate_image_similarity", return_value=0.5):
             result = video_utils._deduplicate_frames([frame1, frame2])
             assert len(result) == 2
 
-    def test_deduplicate_frames_with_duplicates(self, video_utils, mock_frame_data):
-        frame1 = Frame(data=mock_frame_data, timestamp=1.0)
-        frame2 = Frame(data=mock_frame_data, timestamp=2.0)
+    def test_deduplicate_frames_with_duplicates(self, video_utils, mock_base64_frame_data):
+        """Test deduplication with duplicate base64 frames."""
+        frame1 = Frame(data=mock_base64_frame_data, timestamp=1.0)
+        frame2 = Frame(data=mock_base64_frame_data, timestamp=2.0)  # Same base64 data
 
-        with patch.object(
-            video_utils, "_calculate_image_similarity", return_value=0.95
-        ):
+        with patch.object(video_utils, "_calculate_image_similarity", return_value=0.95):
             result = video_utils._deduplicate_frames([frame1, frame2])
             assert len(result) == 1
             assert result[0].timestamp == 1.0
+
+    def test_deduplicate_frames_base64_decoding(self, video_utils, mock_base64_frame_data):
+        """Test that frames are properly decoded from base64 during deduplication."""
+        frame1 = Frame(data=mock_base64_frame_data, timestamp=1.0)
+        frame2 = Frame(data=mock_base64_frame_data, timestamp=2.0)
+
+        with patch("utils.video.video_utils.base64.b64decode") as mock_b64decode, \
+             patch("utils.video.video_utils.Image.open") as mock_image_open, \
+             patch.object(video_utils, "_calculate_image_similarity", return_value=0.5):
+            
+            mock_image = Mock()
+            mock_image.convert.return_value = mock_image
+            mock_image_open.return_value = mock_image
+            
+            mock_b64decode.return_value = b"decoded_image_bytes"
+            
+            with patch("utils.video.video_utils.np.array", return_value=np.zeros((100, 100, 3), dtype=np.uint8)):
+                result = video_utils._deduplicate_frames([frame1, frame2])
+                
+                assert mock_b64decode.call_count == 2
+                mock_b64decode.assert_any_call(mock_base64_frame_data)
+                
+                assert mock_image_open.call_count == 2
+                assert mock_image.convert.call_count == 2
+                mock_image.convert.assert_called_with("RGB")
+
+    def test_deduplicate_frames_with_custom_threshold(self, video_utils, mock_base64_frame_data):
+        """Test deduplication with custom similarity threshold."""
+        frame1 = Frame(data=mock_base64_frame_data, timestamp=1.0)
+        frame2 = Frame(data=mock_base64_frame_data, timestamp=2.0)
+
+        with patch.object(video_utils, "_calculate_image_similarity", return_value=0.85):
+            result = video_utils._deduplicate_frames([frame1, frame2])
+            assert len(result) == 2
+            
+            result = video_utils._deduplicate_frames([frame1, frame2], threshold=0.8)
+            assert len(result) == 1
 
     def test_deduplicate_frames_empty_list(self, video_utils):
         result = video_utils._deduplicate_frames([])
@@ -129,9 +194,9 @@ class TestVideoUtils:
     @patch.object(VideoUtils, "_pick_best_frame_from_scene")
     @patch.object(VideoUtils, "_extract_scenes_from_video")
     def test_get_unique_frames_success(
-        self, mock_extract, mock_pick, mock_dedup, video_utils, mock_frame_data
+        self, mock_extract, mock_pick, mock_dedup, video_utils, mock_base64_frame_data
     ):
-        frame = Frame(data=mock_frame_data, timestamp=1.0)
+        frame = Frame(data=mock_base64_frame_data, timestamp=1.0)
         mock_pick.return_value = [frame]
         mock_dedup.return_value = [frame]
 
