@@ -3,14 +3,14 @@
 import { useState, useCallback } from "react";
 import { VideoUploader, type UploadResult } from "@repo/ui/video-uploader";
 import { GradientButton } from "@repo/ui/gradient-button";
-import { InlineError, useErrorState } from "../ui/error-banner";
+import { InlineError, useErrorState } from "../../ui/error-banner";
 
 interface SimpleVideoUploadProps {
     onSubmit?: (file: File, prompt: string, onProgress?: (step: 'uploading' | 'scheduling' | null) => void) => Promise<void>;
     loadingStep?: 'uploading' | 'scheduling' | null;
 }
 
-export function SimpleVideoUpload({ onSubmit, loadingStep }: SimpleVideoUploadProps) {
+export function VideoUploadForm({ onSubmit, loadingStep }: SimpleVideoUploadProps) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [prompt, setPrompt] = useState("");
 

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type DashboardPage = 'upload' | 'history' | 'settings' | 'account';
+export type DashboardPage = 'upload' | 'settings' | 'account';
 
 interface DashboardContextType {
   activePage: DashboardPage;

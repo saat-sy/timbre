@@ -49,7 +49,7 @@ function mapAmplifyError(error: any): AuthError {
  * Checks user confirmation status from user attributes
  * Now checks custom:status attribute for manual approval workflow
  */
-function checkUserConfirmationStatus(user: any, userAttributes: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
+export function checkUserConfirmationStatus(user: any, userAttributes: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
   if (!user) return 'UNCONFIRMED';
 
   if (user.challengeName === 'NEW_PASSWORD_REQUIRED') {

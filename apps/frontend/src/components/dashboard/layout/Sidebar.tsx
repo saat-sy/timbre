@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useAuth } from "../../lib/auth";
-import { useDashboard } from "./dashboard-context";
+import { useAuth } from "../../../lib/auth";
+import { useDashboard } from "../context";
 
 interface DashboardSidebarProps {
   className?: string;
 }
 
-export function DashboardSidebar({ className }: DashboardSidebarProps) {
+export function Sidebar({ className }: DashboardSidebarProps) {
   const { user } = useAuth();
   const { activePage, setActivePage } = useDashboard();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -86,7 +86,7 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
 
           {/* Top Navigation */}
           <div className="p-3 space-y-3 flex-shrink-0">
-            {/* Upload Link */}
+            {/* Dashboard Link */}
             <button
               onClick={() => {
                 setActivePage('upload');
@@ -97,31 +97,12 @@ export function DashboardSidebar({ className }: DashboardSidebarProps) {
                   ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
-              title={!isExpanded ? 'Upload' : ''}
+              title={!isExpanded ? 'Dashboard' : ''}
             >
               <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
               </svg>
-              {isExpanded && <span className="text-sm font-medium">Upload</span>}
-            </button>
-
-            {/* History Button */}
-            <button
-              onClick={() => {
-                setActivePage('history');
-                setIsExpanded(false);
-              }}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                activePage === 'history' 
-                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-              title={!isExpanded ? 'History' : ''}
-            >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {isExpanded && <span className="text-sm font-medium">History</span>}
+              {isExpanded && <span className="text-sm font-medium">Dashboard</span>}
             </button>
           </div>
 

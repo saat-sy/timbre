@@ -1,7 +1,7 @@
 'use client';
 
-import { useAuth } from "../../lib/auth";
-import { amplifyAuth } from "../../lib/auth/amplify-auth";
+import { useAuth } from "../../../lib/auth";
+import { amplifyAuth } from "../../../lib/auth/amplify-auth";
 import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
 import { GradientButton } from "@repo/ui/gradient-button";
 
