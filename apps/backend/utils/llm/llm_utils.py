@@ -115,11 +115,11 @@ class LLMUtils:
                 transcription=str(transcript)
             )
     
-    def get_realtime_config(self, duration_start: float, duration_end: float, global_context: dict, transcript: list[dict], frames: List[Frame]) -> RealtimeLLMResponse:
+    def get_realtime_config(self, start_time: float, end_time: float, global_context: LLMResponse, transcript: list[dict], frames: List[Frame]) -> RealtimeLLMResponse:
         logger.info("Generating real-time configuration for video segment.")
         
         try:
-            LLMValidators.validate_duration(duration_start, duration_end)
+            LLMValidators.validate_duration(start_time, end_time)
             LLMValidators.validate_transcript(transcript)
             LLMValidators.validate_frames(frames)
             
@@ -139,7 +139,7 @@ class LLMUtils:
 
             content = []
             
-            segment_prompt = Prompts.get_realtime_segment_prompt(duration_start, duration_end)
+            segment_prompt = Prompts.get_realtime_segment_prompt(start_time, end_time)
             content.append({
                 "type": "text",
                 "text": segment_prompt

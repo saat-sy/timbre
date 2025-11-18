@@ -1,5 +1,6 @@
 from io import BytesIO
 import base64
+from typing import Optional
 import cv2
 import numpy as np
 from scenedetect import detect, ContentDetector
@@ -12,13 +13,19 @@ logger = get_logger(__name__)
 
 
 class VideoUtils:
-    def __init__(self, video: bytes) -> None:
-        self.video = video
+    def __init__(self, temp_video_path: str) -> None:
         self.helper_utils = HelperUtils()
+        self.temp_video_path = temp_video_path
 
-    def get_unique_frames(self) -> list[Frame]:
+    def get_unique_frames(self, video: bytes, start_duration: Optional[float] = None, end_duration: Optional[float] = None) -> list[Frame]:
         try:
-            self.temp_video_path = self.helper_utils.create_temp_file(video=self.video)
+            logger.info("Getting unique frames from video")
+            if start_duration is not None or end_duration is not None:
+                self.temp_video_path = self.helper_utils.trim_video(
+                    video_path=self.temp_video_path,
+                    start_duration=start_duration if start_duration is not None else 0.0,
+                    end_duration=end_duration if end_duration is not None else float('inf'),
+                )
             self._extract_scenes_from_video()
             best_frames = self._pick_best_frame_from_scene()
             unique_frames = self._deduplicate_frames(best_frames)
@@ -133,3 +140,16 @@ class VideoUtils:
         self.scenes = []
         for scene_start, scene_end in scene_list:
             self.scenes.append((scene_start.get_seconds(), scene_end.get_seconds()))
+
+if __name__ == "__main__":
+    import time
+    start_time = time.time()
+    video_path = "test.mp4"
+    with open(video_path, "rb") as f:
+        video_bytes = f.read()
+    helper_utils = HelperUtils()
+    temp_video_path = helper_utils.create_temp_file(video=video_bytes)
+    video_utils = VideoUtils(temp_video_path=temp_video_path)
+    frames = video_utils.get_unique_frames(video=video_bytes)
+    end_time = time.time()
+    logger.info(f"Extracted {len(frames)} unique frames in {end_time - start_time:.2f} seconds")

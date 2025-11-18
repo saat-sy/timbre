@@ -13,9 +13,11 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from google.genai import types
+from models.llm_response import LLMResponse
 from service.global_eval.global_eval_service import GlobalEvalService
 from service.lyria.lyria_service import LyriaService
 from models.lyria_config import LyriaConfig
+from service.realtime_eval.realtime_eval_service import RealtimeEvalService
 from shared.commands import Commands
 from shared.logging import get_logger
 
@@ -84,6 +86,10 @@ async def get_context(
             logger.info(
                 f"Successfully extracted context for video file: {file.filename}"
             )
+
+            response_dict = config.dict()
+            response_dict["temp_video_path"] = global_context_service.temp_video_path
+            
             return config.dict()
 
         except Exception as service_error:
@@ -117,6 +123,9 @@ async def music_websocket_endpoint(websocket: WebSocket):
             Commands.BPM,
             Commands.SCALE,
             Commands.WEIGHT,
+            Commands.CONTEXT,
+            Commands.TRANSCRIPTION,
+            "temp_video_path"
         ]
         missing_fields = [field for field in required_fields if not data.get(field)]
 
@@ -132,6 +141,9 @@ async def music_websocket_endpoint(websocket: WebSocket):
             bpm = int(data.get(Commands.BPM))
             scale_str = data.get(Commands.SCALE)
             weight = float(data.get(Commands.WEIGHT))
+            context = data.get(Commands.CONTEXT)
+            transcription = data.get(Commands.TRANSCRIPTION)
+            temp_video_path = data.get("temp_video_path")
 
             if bpm < 30 or bpm > 300:
                 logger.error("BPM value %d is outside valid range (30-300)", bpm)
@@ -163,12 +175,24 @@ async def music_websocket_endpoint(websocket: WebSocket):
             lyria_config = LyriaConfig(
                 prompt=prompt, bpm=bpm, scale=scale_enum, weight=weight
             )
+
+            global_config = LLMResponse(
+                lyria_config=lyria_config,
+                context=context,
+                transcription=str(transcription),
+            )
         except ValueError as e:
             logger.error("Invalid data type in parameters: %s", e)
             await websocket.close(code=1003, reason="Invalid parameter format")
             return
+        
+        realtime_eval_service = RealtimeEvalService(
+            transcription=transcription,
+            global_config=global_config,
+            temp_video_path=temp_video_path,
+        )
 
-        lyria_service = LyriaService(user_websocket=websocket)
+        lyria_service = LyriaService(user_websocket=websocket, realtime_eval_service=realtime_eval_service)
         await lyria_service.start_session(lyria_config=lyria_config)
 
         logger.info("Lyria session started successfully")

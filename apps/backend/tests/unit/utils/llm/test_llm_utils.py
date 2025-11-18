@@ -147,8 +147,8 @@ class TestLLMUtils:
 
         llm_utils = LLMUtils(history=True)
         result = llm_utils.get_realtime_config(
-            duration_start=0.0,
-            duration_end=10.0,
+            start_time=0.0,
+            end_time=10.0,
             global_context=sample_global_context,
             transcript=sample_transcript,
             frames=sample_frames
@@ -173,8 +173,8 @@ class TestLLMUtils:
 
         llm_utils = LLMUtils()
         result = llm_utils.get_realtime_config(
-            duration_start=0.0,
-            duration_end=10.0,
+            start_time=0.0,
+            end_time=10.0,
             global_context={},  # Empty dict instead of None
             transcript=sample_transcript,
             frames=sample_frames
@@ -218,8 +218,8 @@ class TestLLMUtils:
 
         llm_utils = LLMUtils(history=True)
         result = llm_utils.get_realtime_config(
-            duration_start=0.0,
-            duration_end=10.0,
+            start_time=0.0,
+            end_time=10.0,
             global_context={},
             transcript=sample_transcript,
             frames=many_frames
@@ -240,8 +240,8 @@ class TestLLMUtils:
 
         llm_utils = LLMUtils()
         result = llm_utils.get_realtime_config(
-            duration_start=0.0,
-            duration_end=10.0,
+            start_time=0.0,
+            end_time=10.0,
             global_context={},
             transcript=sample_transcript,
             frames=sample_frames

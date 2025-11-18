@@ -16,3 +16,9 @@ class LyriaConfig:
             "scale": self.scale,
             "weight": self.weight,
         }
+    
+    def get_lyria_scale(self) -> types.Scale:
+        for scale_member in types.Scale:
+            if scale_member.name.lower() == self.scale.lower():
+                return scale_member
+        raise ValueError(f"Invalid scale value: {self.scale}")

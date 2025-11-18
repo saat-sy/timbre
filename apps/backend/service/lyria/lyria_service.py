@@ -6,6 +6,7 @@ from google.genai.live_music import AsyncMusicSession
 from fastapi import WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from models.lyria_config import LyriaConfig
+from service.realtime_eval.realtime_eval_service import RealtimeEvalService
 from shared.commands import Commands
 from shared.logging import get_logger
 import json
@@ -15,7 +16,7 @@ logger = get_logger(__name__)
 
 
 class LyriaService:
-    def __init__(self, user_websocket: WebSocket) -> None:
+    def __init__(self, user_websocket: WebSocket, realtime_eval_service: RealtimeEvalService) -> None:
         logger.info("Initializing LyriaService")
         self.user_websocket = user_websocket
         self.model = "models/lyria-realtime-exp"
@@ -27,6 +28,10 @@ class LyriaService:
             api_key=os.getenv("GOOGLE_API_KEY"), http_options={"api_version": "v1alpha"}
         )
         self.config = types.LiveMusicGenerationConfig()
+
+        self.realtime_service = realtime_eval_service
+        self.current_config = self.realtime_service.get_latest_config()
+
         logger.info("LyriaService initialized successfully")
 
     async def _proxy_commands_to_lyria(self, session: AsyncMusicSession) -> None:
@@ -41,6 +46,7 @@ class LyriaService:
                     logger.info("Parsed JSON command: %s", command)
 
                     logger.info("Processing commands")
+
                     if command.get(Commands.COMMAND):
                         if command[Commands.COMMAND] == Commands.PLAY:
                             await session.play()
@@ -52,68 +58,45 @@ class LyriaService:
                             await session.stop()
                             logger.info("Sent STOP command to Lyria session")
                             break
-
-                    logger.info("Processing config")
-                    config_updated = False
-                    if command.get(Commands.BPM):
-                        bpm_value = int(command[Commands.BPM])
-                        if bpm_value < 30 or bpm_value > 300:
-                            logger.warning(
-                                "BPM value %d is outside recommended range (30-300)",
-                                bpm_value,
+                        elif command[Commands.COMMAND] == Commands.EVALUATE:
+                            logger.info("Starting evaluation process")
+                            await self.realtime_service.evaluate_segment(
+                                start_time=command.get(Commands.START_TIME, 0.0),
+                                end_time=command.get(Commands.END_TIME, float('inf')),
                             )
-                        self.config.bpm = bpm_value
-                        logger.info("Updated BPM to %d", self.config.bpm)
-                        config_updated = True
+                            logger.info("Evaluation process completed")
+                        elif command[Commands.COMMAND] == Commands.INJECT:
+                            update_config = False
+                            new_config = self.realtime_service.get_latest_config()
+                            if self.current_config.bpm != new_config.bpm:
+                                logger.info("Injecting updated BPM: %d", self.realtime_service.get_latest_config().bpm)
+                                self.config.bpm = new_config.bpm
+                                update_config = True
+                                logger.info("Updated BPM to %d", self.config.bpm)
+                            if self.current_config.scale != new_config.scale:
+                                logger.info("Injecting updated Scale: %s", new_config.scale)
+                                self.config.scale = new_config.get_lyria_scale()
+                                update_config = True
+                                logger.info("Updated Scale to %s", self.config.scale.name)
+                            if update_config:
+                                await session.set_music_generation_config(config=self.config)
+                                await session.reset_context()
+                                logger.info("Injected new configuration and reset context")
 
-                    if command.get(Commands.SCALE):
-                        scale = command[Commands.SCALE]
-                        found_scale_enum_member = None
-                        for scale_member in types.Scale:
-                            if scale_member.name.lower() == scale.lower():
-                                found_scale_enum_member = scale_member
-                                break
-                        if found_scale_enum_member:
-                            logger.info(
-                                "Setting scale to %s, which requires resetting context.",
-                                found_scale_enum_member.name,
+                            prompt_text = new_config.prompt
+                            weight = new_config.weight
+
+                            await session.set_weighted_prompts(
+                                prompts=[
+                                    types.WeightedPrompt(
+                                        text=prompt_text,
+                                        weight=weight,
+                                    )
+                                ]
                             )
-                            self.config.scale = found_scale_enum_member
-                            config_updated = True
-                        else:
-                            logger.warning(
-                                "Error: Matching enum for scale change not found for scale: %s",
-                                scale,
-                            )
 
-                    if config_updated:
-                        await session.set_music_generation_config(config=self.config)
-                        await session.reset_context()
-                        logger.info("Updated music generation config and reset context")
-
-                    logger.info("Processing prompt")
-                    if command.get(Commands.PROMPT):
-                        prompt_text = command[Commands.PROMPT]
-                        weight = float(command.get(Commands.WEIGHT, 1.0))
-                        if weight < 0.0 or weight > 10.0:
-                            logger.warning(
-                                "Weight value %.2f is outside recommended range (0.0-10.0)",
-                                weight,
-                            )
-                        await session.set_weighted_prompts(
-                            prompts=[
-                                types.WeightedPrompt(text=prompt_text, weight=weight)
-                            ]
-                        )
-                        logger.info(
-                            "Updated prompt to '%s' with weight %.2f",
-                            prompt_text,
-                            weight,
-                        )
-
-                except json.JSONDecodeError as e:
-                    logger.error("Failed to parse JSON message: %s", e)
-                    continue
+                            self.current_config = new_config
+                            logger.info("Inject command completed")
                 except ValueError as e:
                     logger.error("Invalid value in command: %s", e)
                     continue
@@ -159,7 +142,7 @@ class LyriaService:
         logger.info("Starting Lyria session with config: %s", lyria_config)
         try:
             self.config.bpm = lyria_config.bpm
-            self.config.scale = lyria_config.scale
+            self.config.scale = lyria_config.get_lyria_scale()
 
             session: AsyncMusicSession
             async with self.client.aio.live.music.connect(model=self.model) as session:

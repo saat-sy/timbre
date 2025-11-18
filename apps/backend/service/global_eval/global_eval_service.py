@@ -12,7 +12,8 @@ class GlobalEvalService:
     def __init__(self, video: bytes) -> None:
         self.video = video
         self.audio_utils = AudioUtils()
-        self.video_utils = VideoUtils(video=video)
+        self.temp_video_path = self.helper_utils.create_temp_file(video=video)
+        self.video_utils = VideoUtils(self.temp_video_path)
         self.llm_utils = LLMUtils()
         self.helper_utils = HelperUtils()
 
@@ -22,7 +23,7 @@ class GlobalEvalService:
 
             transcriptions = self.audio_utils.get_transcription(video_bytes=self.video)
 
-            frames = self.video_utils.get_unique_frames()
+            frames = self.video_utils.get_unique_frames(video=self.video)
 
             response = self.llm_utils.get_global_config(transcript=transcriptions, frames=frames)
 
