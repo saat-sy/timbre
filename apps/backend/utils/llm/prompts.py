@@ -10,6 +10,7 @@ LYRIA REALTIME PROMPTING GUIDELINES:
 - Available instruments include (but not limited to): 303 Acid Bass, 808 Hip Hop Beat, Accordion, Alto Saxophone, Bagpipes, Banjo, Bass Clarinet, Cello, Charango, Clavichord, Didgeridoo, Drumline, Flamenco Guitar, Guitar, Harmonica, Harp, Kalimba, Mandolin, Marimba, Piano, Rhodes Piano, Sitar, Steel Drum, Synth Pads, Tabla, Trumpet, Vibraphone, and any other instruments that fit the scene
 - Music genres include (but not limited to): Acid Jazz, Afrobeat, Baroque, Bluegrass, Blues Rock, Bossa Nova, Celtic Folk, Chillout, Classic Rock, Deep House, Disco Funk, Dubstep, EDM, Electro Swing, Funk Metal, Indie Folk, Jazz Fusion, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance, and any other genres or fusion styles that match the video
 - Mood descriptors include (but not limited to): Acoustic, Ambient, Bright Tones, Chill, Danceable, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Live Performance, Lo-fi, Ominous, Psychedelic, Saturated Tones, Upbeat, Virtuoso, and any other descriptive terms that capture the essence
+- Musical scales available: C_MAJOR_A_MINOR (C major / A minor), D_FLAT_MAJOR_B_FLAT_MINOR (D♭ major / B♭ minor), D_MAJOR_B_MINOR (D major / B minor), E_FLAT_MAJOR_C_MINOR (E♭ major / C minor), E_MAJOR_D_FLAT_MINOR (E major / C♯/D♭ minor), F_MAJOR_D_MINOR (F major / D minor), G_FLAT_MAJOR_E_FLAT_MINOR (G♭ major / E♭ minor), G_MAJOR_E_MINOR (G major / E minor), A_FLAT_MAJOR_F_MINOR (A♭ major / F minor), A_MAJOR_G_FLAT_MINOR (A major / F♯/G♭ minor), B_FLAT_MAJOR_G_MINOR (B♭ major / G minor), B_MAJOR_A_FLAT_MINOR (B major / G♯/A♭ minor), SCALE_UNSPECIFIED (Default / The model decides)
 - Create innovative combinations and custom descriptors when needed to perfectly match the video's unique atmosphere
 
 TRANSCRIPTION AND KEYFRAMES:
@@ -22,20 +23,20 @@ OUTPUT RULES:
 
 OUTPUT (JSON only):
 If NOT final chunk:
-{
+{{
   "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last."
-}
+}}
 
 If IS final chunk:
-{
-  "lyria_config": {
+{{
+  "lyria_config": {{
     "prompt": "The single best musical prompt (genre, mood, instruments) that should play at the *start* of the video.",
     "bpm": The single best global tempo (integer between 60-200) for the entire video.,
     "scale": "The single best musical scale for the entire video.",
     "weight": 1.0
-  },
+  }},
   "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last."
-}
+}}
 
 Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any explanatory text, markdown, or apologies before or after the JSON.
 """
@@ -55,35 +56,44 @@ MUSIC GUIDELINES:
 - Instruments: 303 Acid Bass, 808 Hip Hop Beat, Accordion, Alto Saxophone, Bagpipes, Banjo, Bass Clarinet, Cello, Charango, Clavichord, Didgeridoo, Drumline, Flamenco Guitar, Guitar, Harmonica, Harp, Kalimba, Mandolin, Marimba, Piano, Rhodes Piano, Sitar, Steel Drum, Synth Pads, Tabla, Trumpet, Vibraphone
 - Genres: Acid Jazz, Afrobeat, Baroque, Bluegrass, Blues Rock, Bossa Nova, Celtic Folk, Chillout, Classic Rock, Deep House, Disco Funk, Dubstep, EDM, Electro Swing, Funk Metal, Indie Folk, Jazz Fusion, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance
 - Moods: Acoustic, Ambient, Bright Tones, Chill, Danceable, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Live Performance, Lo-fi, Ominous, Psychedelic, Saturated Tones, Upbeat, Virtuoso
+- Musical scales: C_MAJOR_A_MINOR (C major / A minor), D_FLAT_MAJOR_B_FLAT_MINOR (D♭ major / B♭ minor), D_MAJOR_B_MINOR (D major / B minor), E_FLAT_MAJOR_C_MINOR (E♭ major / C minor), E_MAJOR_D_FLAT_MINOR (E major / C♯/D♭ minor), F_MAJOR_D_MINOR (F major / D minor), G_FLAT_MAJOR_E_FLAT_MINOR (G♭ major / E♭ minor), G_MAJOR_E_MINOR (G major / E minor), A_FLAT_MAJOR_F_MINOR (A♭ major / F minor), A_MAJOR_G_FLAT_MINOR (A major / F♯/G♭ minor), B_FLAT_MAJOR_G_MINOR (B♭ major / G minor), B_MAJOR_A_FLAT_MINOR (B major / G♯/A♭ minor), SCALE_UNSPECIFIED (Default / The model decides)
 
 Only change music when there's a significant shift that warrants it.
 
 TRANSCRIPTION: {transcription}
 
 OUTPUT (JSON only):
-{
-  "lyria_config": {
+{{
+  "lyria_config": {{
     "prompt": "New music description (or null if no change)",
     "bpm": integer_between_60_200,
     "scale": "musical_scale",
     "weight": 1.0
-  } || null,
+  }} || null,
   "context": "Brief explanation of this 10-second segment",
   "change_music": boolean,
   "change_music_at": timestamp_in_seconds || null
-}
+}}
 
 Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any explanatory text, markdown, or apologies before or after the JSON.
 """
 
     @staticmethod
-    def get_global_context_prompt(transcription: dict) -> str:
-        return Prompts.GLOBAL_CONTEXT_PROMPT.format(transcription=transcription)
+    def get_global_context_prompt(transcription: list[dict]) -> str:
+        return Prompts.GLOBAL_CONTEXT_PROMPT.format(transcription=str(transcription))
     
     @staticmethod
-    def get_realtime_context_prompt(transcription: str, global_context: str) -> str:
-        return Prompts.REALTIME_CONTEXT_PROMPT.format(transcription=transcription, global_context=global_context)
+    def get_realtime_context_prompt(transcription: list[dict], global_context: str) -> str:
+        return Prompts.REALTIME_CONTEXT_PROMPT.format(transcription=str(transcription), global_context=global_context)
     
     @staticmethod
     def get_realtime_segment_prompt(duration_start: float, duration_end: float) -> str:
         return f"Analyze the video segment from {duration_start} seconds to {duration_end} seconds."
+
+if __name__ == "__main__":
+    sample_transcription = [
+        {"start": 0.0, "end": 5.0, "text": "A sunny day in the park."},
+        {"start": 5.0, "end": 10.0, "text": "Children are playing and laughing."}
+    ]
+    prompt = Prompts.get_global_context_prompt(sample_transcription)
+    print(prompt)

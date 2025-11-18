@@ -12,15 +12,23 @@ class GlobalEvalService:
     def __init__(self, video: bytes) -> None:
         self.video = video
         self.audio_utils = AudioUtils()
-        self.video_utils = VideoUtils()
+        self.video_utils = VideoUtils(video=video)
         self.llm_utils = LLMUtils()
         self.helper_utils = HelperUtils()
 
     def evaluate(self) -> LLMResponse:
-        pass
+        try:
+            logger.info("Starting global evaluation of the video.")
 
-    def _get_collage_from_video(self, transcript: str) -> any:
-        pass
+            transcriptions = self.audio_utils.get_transcription(video_bytes=self.video)
 
-    def _get_transcript_from_video(self) -> str:
-        pass
+            frames = self.video_utils.get_unique_frames()
+
+            response = self.llm_utils.get_global_config(transcript=transcriptions, frames=frames)
+
+            logger.info("Global evaluation completed.")
+            
+            return response
+        except Exception as e:
+            logger.error(f"Error during global evaluation: {e}")
+            raise e

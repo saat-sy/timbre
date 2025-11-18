@@ -1,6 +1,5 @@
 from io import BytesIO
-import os
-import time
+import base64
 import cv2
 import numpy as np
 from scenedetect import detect, ContentDetector
@@ -65,7 +64,7 @@ class VideoUtils:
                         _, buffer = cv2.imencode(
                             ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 95]
                         )
-                        best_frame = buffer.tobytes()
+                        best_frame = base64.b64encode(buffer.tobytes()).decode('utf-8')
                         best_timestamp = frame_num / fps
 
                 if best_frame is not None:
@@ -91,7 +90,8 @@ class VideoUtils:
         unique_images = []
 
         for frame in frames:
-            image = Image.open(BytesIO(frame.data)).convert("RGB")
+            image_bytes = base64.b64decode(frame.data)
+            image = Image.open(BytesIO(image_bytes)).convert("RGB")
             image_np = np.array(image)
 
             is_duplicate = False

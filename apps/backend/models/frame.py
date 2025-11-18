@@ -3,5 +3,5 @@ from dataclasses import dataclass
 
 @dataclass
 class Frame:
-    data: bytes
+    data: str
     timestamp: float

@@ -32,12 +32,6 @@ class LLMValidators:
     def validate_transcript(transcript) -> None:
         if transcript is None:
             raise ValueError("Transcript cannot be None")
-        
-        if isinstance(transcript, dict) and not transcript:
-            raise ValueError("Transcript dictionary cannot be empty")
-        
-        if isinstance(transcript, str) and not transcript.strip():
-            raise ValueError("Transcript string cannot be empty")
 
     @staticmethod
     def validate_duration(start: float, end: float) -> None:
@@ -61,7 +55,8 @@ class LLMValidators:
         
         scale = lyria_config_data['scale']
         if scale not in [scale.name for scale in types.Scale]:
-            raise ValueError(f"Scale '{scale}' is not a valid musical scale")
+            logger.warning(f"Invalid scale '{scale}', defaulting to SCALE_UNSPECIFIED")
+            lyria_config_data['scale'] = types.Scale.SCALE_UNSPECIFIED.name
         
         weight = lyria_config_data['weight']
         if not isinstance(weight, (int, float)) or weight <= 0:
@@ -111,7 +106,7 @@ class LLMValidators:
         raise last_exception if last_exception else Exception("API call failed after all retries")
 
     @staticmethod
-    def parse_llm_response(response: ChatCompletion, transcript: dict) -> LLMResponse:
+    def parse_llm_response(response: ChatCompletion, transcript: List) -> LLMResponse:
         try:
             logger.info("Parsing global configuration response from LLM.")
             content = response.choices[0].message.content
@@ -119,21 +114,19 @@ class LLMValidators:
                 config_data = json.loads(content)
                 if 'lyria_config' not in config_data:
                     raise ValueError("Missing 'lyria_config' in LLM response")
-                if 'context' not in config_data:
-                    raise ValueError("Missing 'context' in LLM response")
 
                 if 'transcription' not in config_data:
-                    config_data['transcription'] = str(transcript)
+                    config_data['transcription'] = transcript
 
-                context = config_data['context']
-                if not isinstance(context, str) or not context.strip():
-                    raise ValueError("Context must be a non-empty string")
+                context = config_data.get('context', '')
+                if context and (not isinstance(context, str) or not context.strip()):
+                    raise ValueError("Context must be a non-empty string when provided")
                 
                 lyria_config_obj = LLMValidators.create_lyria_config(config_data['lyria_config'])
                 
                 return LLMResponse(
                     lyria_config=lyria_config_obj,
-                    context=config_data['context'],
+                    context=config_data.get('context', ''),
                     transcription=config_data['transcription']
                 )
             else:
@@ -143,7 +136,7 @@ class LLMValidators:
             default_lyria = LyriaConfig(
                 prompt="Ambient, neutral background music",
                 bpm=120,
-                scale=types.Scale.C_MAJOR_A_MINOR.name,
+                scale=types.Scale.SCALE_UNSPECIFIED.name,
                 weight=1.0
             )
             return LLMResponse(

@@ -30,7 +30,7 @@ class LLMUtils:
         self.vision_model = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
         self.history: Optional[ChatHistory] = ChatHistory() if history else None
 
-    def get_global_config(self, transcript: dict, frames: List[Frame]) -> LLMResponse:
+    def get_global_config(self, transcript: list[dict], frames: List[Frame]) -> LLMResponse:
         logger.info("Generating global configuration for video.")
         
         try:
@@ -49,7 +49,7 @@ class LLMUtils:
                 })
 
                 if chunk != chunks[-1]:
-                    user_prompt = "Please analyze the next set of frames and provide an updated global music configuration based on the video's narrative so far. Do not finalize the configuration yet."
+                    user_prompt = "Please analyze these set of frames and provide context."
                 else:
                     user_prompt = "This is the final set of frames. Please provide the final global music configuration for the entire video."
 
@@ -66,7 +66,8 @@ class LLMUtils:
                         },
                     })
 
-                messages.append(history)
+                if history:
+                    messages.extend(history)
                 messages.append({
                     "role": "user",
                     "content": content
@@ -114,7 +115,7 @@ class LLMUtils:
                 transcription=str(transcript)
             )
     
-    def get_realtime_config(self, duration_start: float, duration_end: float, global_context: dict, transcript: str, frames: List[Frame]) -> RealtimeLLMResponse:
+    def get_realtime_config(self, duration_start: float, duration_end: float, global_context: dict, transcript: list[dict], frames: List[Frame]) -> RealtimeLLMResponse:
         logger.info("Generating real-time configuration for video segment.")
         
         try:
@@ -143,6 +144,9 @@ class LLMUtils:
                 "type": "text",
                 "text": segment_prompt
             })
+
+            if len(frames) > self.MAX_FRAMES_PER_REQUEST:
+                frames = frames[:self.MAX_FRAMES_PER_REQUEST]
 
             for frame in frames:
                 content.append({
