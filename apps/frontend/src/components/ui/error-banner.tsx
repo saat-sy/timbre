@@ -34,7 +34,7 @@ export function ErrorBanner({
 
   const handleRetry = async () => {
     if (!onRetry) return;
-    
+
     setIsRetrying(true);
     try {
       await onRetry();
@@ -88,23 +88,43 @@ export function ErrorBanner({
   };
 
   return (
-    <div className={`${getVariantStyles()} ${getSizeStyles()} ${className} w-full`}>
+    <div
+      className={`${getVariantStyles()} ${getSizeStyles()} ${className} w-full`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start space-x-3 flex-1 min-w-0">
           {showIcon && (
-            <div className={`bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-              size === 'sm' ? 'w-5 h-5' : size === 'md' ? 'w-6 h-6' : 'w-8 h-8'
-            }`}>
-              <svg className={`text-red-400 ${getIconSize()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div
+              className={`bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                size === 'sm'
+                  ? 'w-5 h-5'
+                  : size === 'md'
+                    ? 'w-6 h-6'
+                    : 'w-8 h-8'
+              }`}
+            >
+              <svg
+                className={`text-red-400 ${getIconSize()}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
           )}
-          
+
           <div className="flex-1 min-w-0">
-            <h3 className="text-red-400 font-medium mb-1 break-words">{title}</h3>
+            <h3 className="text-red-400 font-medium mb-1 break-words">
+              {title}
+            </h3>
             <p className="text-red-300 leading-relaxed break-words">{error}</p>
-            
+
             {/* Action buttons */}
             {(isRetryable || onDismiss) && (
               <div className="flex flex-wrap items-center gap-3 mt-3">
@@ -119,7 +139,7 @@ export function ErrorBanner({
                     Try Again
                   </GradientButton>
                 )}
-                
+
                 {!persistent && onDismiss && (
                   <button
                     onClick={onDismiss}
@@ -132,7 +152,7 @@ export function ErrorBanner({
             )}
           </div>
         </div>
-        
+
         {/* Close button */}
         {!persistent && onDismiss && (
           <button
@@ -140,8 +160,18 @@ export function ErrorBanner({
             className="text-red-400 hover:text-red-300 transition-colors p-1 flex-shrink-0"
             aria-label="Close error"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         )}

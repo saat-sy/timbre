@@ -14,7 +14,7 @@ export class ErrorHandler {
   ): string {
     const {
       logError = true,
-      fallbackMessage = 'An unexpected error occurred'
+      fallbackMessage = 'An unexpected error occurred',
     } = options;
 
     let message: string;
@@ -42,8 +42,6 @@ export class ErrorHandler {
     }
     return 'File upload failed. Please try again.';
   }
-
-
 }
 
 export function useErrorHandler() {

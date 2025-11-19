@@ -9,7 +9,9 @@ interface DashboardContextType {
   setActivePage: (page: DashboardPage) => void;
 }
 
-const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
+const DashboardContext = createContext<DashboardContextType | undefined>(
+  undefined
+);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [activePage, setActivePage] = useState<DashboardPage>('upload');

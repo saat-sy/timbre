@@ -78,7 +78,9 @@ export const withConfirmedAuth = <P extends object>(
   return ConfirmedAuthenticatedComponent;
 };
 
-export const useRedirectIfAuthenticated = (redirectTo: string = '/dashboard') => {
+export const useRedirectIfAuthenticated = (
+  redirectTo: string = '/dashboard'
+) => {
   const { isAuthenticated, isConfirmed, isLoading } = useAuth();
   const router = useRouter();
 

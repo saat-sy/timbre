@@ -1,4 +1,13 @@
-import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode, fetchUserAttributes } from 'aws-amplify/auth';
+import {
+  signIn,
+  signUp,
+  signOut,
+  getCurrentUser,
+  fetchAuthSession,
+  confirmSignUp,
+  resendSignUpCode,
+  fetchUserAttributes,
+} from 'aws-amplify/auth';
 import { User, AuthError } from './types';
 
 function mapAmplifyError(error: any): AuthError {
@@ -7,34 +16,66 @@ function mapAmplifyError(error: any): AuthError {
 
   switch (errorCode) {
     case 'UserNotFoundException':
-      return new AuthError('No account found with this email address.', errorCode, error);
+      return new AuthError(
+        'No account found with this email address.',
+        errorCode,
+        error
+      );
 
     case 'NotAuthorizedException':
       return new AuthError('Invalid email or password.', errorCode, error);
 
     case 'UserNotConfirmedException':
-      return new AuthError('Your account is not confirmed. Please verify your email address.', errorCode, error);
+      return new AuthError(
+        'Your account is not confirmed. Please verify your email address.',
+        errorCode,
+        error
+      );
 
     case 'CodeMismatchException':
-      return new AuthError('Invalid verification code. Please check and try again.', errorCode, error);
+      return new AuthError(
+        'Invalid verification code. Please check and try again.',
+        errorCode,
+        error
+      );
 
     case 'ExpiredCodeException':
-      return new AuthError('Verification code has expired. Please request a new one.', errorCode, error);
+      return new AuthError(
+        'Verification code has expired. Please request a new one.',
+        errorCode,
+        error
+      );
 
     case 'UsernameExistsException':
-      return new AuthError('An account with this email already exists.', errorCode, error);
+      return new AuthError(
+        'An account with this email already exists.',
+        errorCode,
+        error
+      );
 
     case 'InvalidPasswordException':
-      return new AuthError('Password does not meet requirements.', errorCode, error);
+      return new AuthError(
+        'Password does not meet requirements.',
+        errorCode,
+        error
+      );
 
     case 'InvalidParameterException':
       return new AuthError(`Invalid parameters`, errorCode, error);
 
     case 'TooManyRequestsException':
-      return new AuthError('Too many requests. Please try again later.', errorCode, error);
+      return new AuthError(
+        'Too many requests. Please try again later.',
+        errorCode,
+        error
+      );
 
     case 'NetworkError':
-      return new AuthError('Network error. Please check your connection and try again.', errorCode, error);
+      return new AuthError(
+        'Network error. Please check your connection and try again.',
+        errorCode,
+        error
+      );
 
     default:
       return new AuthError(
@@ -49,7 +90,10 @@ function mapAmplifyError(error: any): AuthError {
  * Checks user confirmation status from user attributes
  * Now checks custom:status attribute for manual approval workflow
  */
-export function checkUserConfirmationStatus(user: any, userAttributes: any): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
+export function checkUserConfirmationStatus(
+  user: any,
+  userAttributes: any
+): 'CONFIRMED' | 'UNCONFIRMED' | 'FORCE_CHANGE_PASSWORD' {
   if (!user) return 'UNCONFIRMED';
 
   if (user.challengeName === 'NEW_PASSWORD_REQUIRED') {
@@ -79,14 +123,19 @@ async function transformAmplifyUser(amplifyUser: any): Promise<User> {
   }
 
   // Check confirmation status using the fetched attributes
-  const confirmationStatus = checkUserConfirmationStatus(amplifyUser, userAttributes);
+  const confirmationStatus = checkUserConfirmationStatus(
+    amplifyUser,
+    userAttributes
+  );
 
   // Construct full name from given_name and family_name, or fallback to name attribute
   const firstName = userAttributes.given_name || '';
   const lastName = userAttributes.family_name || '';
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') ||
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(' ') ||
     userAttributes.name ||
-    userAttributes.email?.split('@')[0] || '';
+    userAttributes.email?.split('@')[0] ||
+    '';
 
   return {
     id: amplifyUser.userId || amplifyUser.username,
@@ -95,7 +144,7 @@ async function transformAmplifyUser(amplifyUser: any): Promise<User> {
     createdAt: userAttributes.created_at
       ? new Date(userAttributes.created_at)
       : new Date(),
-    confirmationStatus
+    confirmationStatus,
   };
 }
 
@@ -120,7 +169,6 @@ export const amplifyAuth = {
       // Get the current user after successful sign in
       const currentUser = await getCurrentUser();
       return await transformAmplifyUser(currentUser);
-
     } catch (error: any) {
       console.error('Login error:', error);
       throw mapAmplifyError(error);
@@ -130,7 +178,12 @@ export const amplifyAuth = {
   /**
    * Registers a new user with email, password, and optional first/last name
    */
-  register: async (email: string, password: string, firstName?: string, lastName?: string): Promise<User> => {
+  register: async (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string
+  ): Promise<User> => {
     try {
       const userAttributes: Record<string, string> = {
         email: email,
@@ -147,22 +200,19 @@ export const amplifyAuth = {
         },
       });
 
-      const fullName = [firstName?.trim(), lastName?.trim()]
-        .filter(Boolean)
-        .join(' ') || email.split('@')[0];
+      const fullName =
+        [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ') ||
+        email.split('@')[0];
 
       const newUser: User = {
         id: userId || `user_${Date.now()}`,
         email: email,
         name: fullName,
         createdAt: new Date(),
-        confirmationStatus: 'UNCONFIRMED'
+        confirmationStatus: 'UNCONFIRMED',
       };
 
-
-
       return newUser;
-
     } catch (error: any) {
       console.error('Registration error:', error);
       console.error('Error details:', {
@@ -170,7 +220,7 @@ export const amplifyAuth = {
         code: error.code,
         message: error.message,
         email,
-        passwordLength: password.length
+        passwordLength: password.length,
       });
       throw mapAmplifyError(error);
     }
@@ -199,10 +249,7 @@ export const amplifyAuth = {
       });
 
       // Check if user is authenticated
-      const session = await Promise.race([
-        fetchAuthSession(),
-        timeoutPromise
-      ]);
+      const session = await Promise.race([fetchAuthSession(), timeoutPromise]);
 
       if (!session.tokens) {
         return null;
@@ -211,15 +258,16 @@ export const amplifyAuth = {
       // Get current user details
       const currentUser = await Promise.race([
         getCurrentUser(),
-        timeoutPromise
+        timeoutPromise,
       ]);
 
       return await transformAmplifyUser(currentUser);
-
     } catch (error: any) {
-      if (error.name === 'UserUnAuthenticatedException' ||
+      if (
+        error.name === 'UserUnAuthenticatedException' ||
         error.name === 'NotAuthorizedException' ||
-        error.message === 'getCurrentUser timeout') {
+        error.message === 'getCurrentUser timeout'
+      ) {
         return null;
       }
 

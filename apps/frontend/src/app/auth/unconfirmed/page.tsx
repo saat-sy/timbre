@@ -34,8 +34,12 @@ export default function UnconfirmedPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">Account Confirmation Pending</h1>
-        <p className="text-gray-400">Your account is waiting for confirmation</p>
+        <h1 className="text-3xl font-bold text-white mb-2">
+          Account Confirmation Pending
+        </h1>
+        <p className="text-gray-400">
+          Your account is waiting for confirmation
+        </p>
       </div>
 
       {/* Status Information */}
@@ -66,14 +70,17 @@ export default function UnconfirmedPage() {
               Welcome, {user?.email}!
             </h2>
             <p className="text-gray-300 leading-relaxed">
-              Your account is pending manual approval. Our team will review and activate your account.
-              You'll receive an email notification once your account is approved.
+              Your account is pending manual approval. Our team will review and
+              activate your account. You'll receive an email notification once
+              your account is approved.
             </p>
           </div>
 
           {/* Information Section */}
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-left">
-            <h3 className="text-blue-400 font-medium mb-2">What happens next?</h3>
+            <h3 className="text-blue-400 font-medium mb-2">
+              What happens next?
+            </h3>
             <ul className="text-gray-300 text-sm space-y-2">
               <li className="flex items-start">
                 <span className="text-green-400 mr-2">✓</span>
@@ -141,7 +148,8 @@ export default function UnconfirmedPage() {
       <LiquidGlassCard variant="secondary" className="p-4">
         <div className="text-center">
           <p className="text-sm text-gray-400 mb-2">
-            <span className="text-green-400">Status:</span> Pending Manual Approval
+            <span className="text-green-400">Status:</span> Pending Manual
+            Approval
           </p>
           <p className="text-xs text-gray-500">
             Account approval typically takes 1-2 business days

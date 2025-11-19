@@ -10,12 +10,18 @@ export function UploadPage() {
   const router = useRouter();
   const { error, isRetryable, showError, clearError } = useErrorState();
   const { handleUploadError, isRetryable: checkRetryable } = useErrorHandler();
-  const [loadingStep, setLoadingStep] = useState<'uploading' | 'scheduling' | null>(null);
+  const [loadingStep, setLoadingStep] = useState<
+    'uploading' | 'scheduling' | null
+  >(null);
 
   // Store last submission for retry
   let lastSubmission: { file: File; prompt: string } | null = null;
 
-  const handleSubmit = async (file: File, prompt: string, onProgress?: (step: 'uploading' | 'scheduling' | null) => void) => {
+  const handleSubmit = async (
+    file: File,
+    prompt: string,
+    onProgress?: (step: 'uploading' | 'scheduling' | null) => void
+  ) => {
     clearError();
     lastSubmission = { file, prompt };
 
@@ -46,11 +52,14 @@ export function UploadPage() {
 
       // Store video URL in sessionStorage for the video player page
       const videoUrl = URL.createObjectURL(file);
-      sessionStorage.setItem(`video_${sessionId}`, JSON.stringify({
-        videoUrl,
-        fileName: file.name,
-        prompt,
-      }));
+      sessionStorage.setItem(
+        `video_${sessionId}`,
+        JSON.stringify({
+          videoUrl,
+          fileName: file.name,
+          prompt,
+        })
+      );
 
       setLoadingStep(null);
       onProgress?.(null);
@@ -95,7 +104,7 @@ export function UploadPage() {
       </div>
 
       {/* Centered Upload Interface - takes remaining space */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden mt-12">
+      <div className="flex-1 flex items-center justify-center overflow-hidden mt-24">
         <VideoUploadForm onSubmit={handleSubmit} />
       </div>
     </div>

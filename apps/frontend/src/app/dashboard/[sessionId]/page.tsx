@@ -15,7 +15,7 @@ function VideoPlayerContent() {
   useEffect(() => {
     // Retrieve the uploaded video from sessionStorage
     const storedVideoData = sessionStorage.getItem(`video_${sessionId}`);
-    
+
     if (storedVideoData) {
       try {
         const { videoUrl } = JSON.parse(storedVideoData);
@@ -80,11 +80,25 @@ function VideoPlayerContent() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center max-w-md mx-4">
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 mb-6">
-            <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-12 h-12 text-red-400 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
-            <h2 className="text-xl font-semibold text-white mb-2">Video Not Found</h2>
-            <p className="text-gray-400">{error || 'The video you are looking for does not exist.'}</p>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              Video Not Found
+            </h2>
+            <p className="text-gray-400">
+              {error || 'The video you are looking for does not exist.'}
+            </p>
           </div>
           <button
             onClick={handleBackToDashboard}
@@ -108,8 +122,18 @@ function VideoPlayerContent() {
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               aria-label="Back to dashboard"
             >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
             <div>
@@ -134,7 +158,10 @@ function VideoPlayerContent() {
         </div>
 
         {/* Video Info */}
-        <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-6 animate-slideUp" style={{ animationDelay: '100ms' }}>
+        <div
+          className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-6 animate-slideUp"
+          style={{ animationDelay: '100ms' }}
+        >
           <h2 className="text-white font-semibold mb-2">Video Details</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">

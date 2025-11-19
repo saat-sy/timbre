@@ -1,9 +1,9 @@
 'use client';
 
-import { useAuth } from "../../../lib/auth";
-import { amplifyAuth } from "../../../lib/auth/amplify-auth";
-import { LiquidGlassCard } from "@repo/ui/liquid-glass-card";
-import { GradientButton } from "@repo/ui/gradient-button";
+import { useAuth } from '../../../lib/auth';
+import { amplifyAuth } from '../../../lib/auth/amplify-auth';
+import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
+import { GradientButton } from '@repo/ui/gradient-button';
 
 export function AccountPage() {
   const { user, refreshUser } = useAuth();
@@ -22,7 +22,9 @@ export function AccountPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Account</h1>
-          <p className="text-gray-400">Manage your account settings and profile information.</p>
+          <p className="text-gray-400">
+            Manage your account settings and profile information.
+          </p>
         </div>
 
         <div className="grid gap-6">
@@ -46,22 +48,28 @@ export function AccountPage() {
 
           {/* Account Details */}
           <LiquidGlassCard className="p-6">
-            <h3 className="text-xl font-semibold text-white mb-4">Profile Information</h3>
+            <h3 className="text-xl font-semibold text-white mb-4">
+              Profile Information
+            </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-white font-medium mb-2">Email</label>
-                <input 
-                  type="email" 
-                  value={user?.email || ''} 
+                <label className="block text-white font-medium mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={user?.email || ''}
                   disabled
                   className="w-full p-3 bg-black/50 border border-white/20 rounded-lg text-white disabled:opacity-50"
                 />
               </div>
               <div>
-                <label className="block text-white font-medium mb-2">Display Name</label>
-                <input 
-                  type="text" 
-                  value={user?.name || ''} 
+                <label className="block text-white font-medium mb-2">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={user?.name || ''}
                   placeholder="Enter your display name"
                   className="w-full p-3 bg-black/50 border border-white/20 rounded-lg text-white"
                 />
@@ -71,21 +79,23 @@ export function AccountPage() {
 
           {/* Subscription */}
           <LiquidGlassCard className="p-6">
-            <h3 className="text-xl font-semibold text-white mb-4">Subscription</h3>
+            <h3 className="text-xl font-semibold text-white mb-4">
+              Subscription
+            </h3>
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-white font-medium">Free Plan</div>
                 <div className="text-sm text-gray-400">5 uploads per month</div>
               </div>
-              <GradientButton size="sm">
-                Upgrade
-              </GradientButton>
+              <GradientButton size="sm">Upgrade</GradientButton>
             </div>
           </LiquidGlassCard>
 
           {/* Danger Zone */}
           <LiquidGlassCard className="p-6 border-red-500/20">
-            <h3 className="text-xl font-semibold text-white mb-4">Account Actions</h3>
+            <h3 className="text-xl font-semibold text-white mb-4">
+              Account Actions
+            </h3>
             <div className="space-y-3">
               <GradientButton
                 onClick={handleLogout}
