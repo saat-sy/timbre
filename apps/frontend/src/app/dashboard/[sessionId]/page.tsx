@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { withConfirmedAuth } from '../../../lib/auth';
 import { useEffect, useState } from 'react';
+import { DashboardLayout } from '../../../components/dashboard';
 
 function VideoPlayerContent() {
   const params = useParams();
@@ -37,39 +38,10 @@ function VideoPlayerContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black">
-        {/* Header skeleton */}
-        <div className="border-b border-white/10 bg-black/50 backdrop-blur-xl">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center space-x-4">
-            <div className="w-9 h-9 bg-white/5 rounded-lg animate-pulse"></div>
-            <div className="space-y-2">
-              <div className="w-32 h-5 bg-white/5 rounded animate-pulse"></div>
-              <div className="w-48 h-4 bg-white/5 rounded animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Video player skeleton */}
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-            <div className="w-full aspect-video bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 border-3 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-white/60 text-sm">Loading your video...</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Info skeleton */}
-          <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-6">
-            <div className="w-32 h-5 bg-white/10 rounded animate-pulse mb-4"></div>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <div className="w-24 h-4 bg-white/5 rounded animate-pulse"></div>
-                <div className="w-64 h-4 bg-white/5 rounded animate-pulse"></div>
-              </div>
-            </div>
-          </div>
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-3 border-white/20 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white/60 text-sm">Loading your video...</p>
         </div>
       </div>
     );
@@ -77,7 +49,7 @@ function VideoPlayerContent() {
 
   if (error || !videoUrl) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md mx-4">
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 mb-6">
             <svg
@@ -112,40 +84,15 @@ function VideoPlayerContent() {
   }
 
   return (
-    <div className="min-h-screen bg-black animate-fadeIn">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-black/50 backdrop-blur-xl sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={handleBackToDashboard}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              aria-label="Back to dashboard"
-            >
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-lg font-semibold text-white">Video Player</h1>
-              <p className="text-sm text-gray-400">Session: {sessionId}</p>
-            </div>
-          </div>
+    <div className="h-full p-6 animate-fadeIn">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Video Player</h1>
+          <p className="text-gray-400">Session: {sessionId}</p>
         </div>
-      </div>
 
-      {/* Video Player */}
-      <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Video Player */}
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden animate-slideUp">
           <video
             src={videoUrl}
@@ -159,7 +106,7 @@ function VideoPlayerContent() {
 
         {/* Video Info */}
         <div
-          className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-6 animate-slideUp"
+          className="bg-white/5 border border-white/10 rounded-2xl p-6 animate-slideUp"
           style={{ animationDelay: '100ms' }}
         >
           <h2 className="text-white font-semibold mb-2">Video Details</h2>
@@ -207,7 +154,11 @@ function VideoPlayerContent() {
 }
 
 function VideoPlayerPage() {
-  return <VideoPlayerContent />;
+  return (
+    <DashboardLayout>
+      <VideoPlayerContent />
+    </DashboardLayout>
+  );
 }
 
 export default withConfirmedAuth(VideoPlayerPage);

@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 
 export type DashboardPage = 'upload' | 'settings' | 'account';
 
@@ -14,7 +21,31 @@ const DashboardContext = createContext<DashboardContextType | undefined>(
 );
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [activePage, setActivePage] = useState<DashboardPage>('upload');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [activePage, setActivePageState] = useState<DashboardPage>('upload');
+
+  // Initialize from URL
+  useEffect(() => {
+    const page = searchParams.get('page');
+    if (page && ['upload', 'settings', 'account'].includes(page)) {
+      setActivePageState(page as DashboardPage);
+    }
+  }, [searchParams]);
+
+  const setActivePage = (page: DashboardPage) => {
+    setActivePageState(page);
+    // Update URL without full reload
+    const params = new URLSearchParams(searchParams.toString());
+    if (page === 'upload') {
+      params.delete('page');
+    } else {
+      params.set('page', page);
+    }
+    const queryString = params.toString();
+    router.push(`${pathname}${queryString ? `?${queryString}` : ''}`);
+  };
 
   return (
     <DashboardContext.Provider value={{ activePage, setActivePage }}>

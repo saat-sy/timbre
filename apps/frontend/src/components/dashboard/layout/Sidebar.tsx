@@ -1,14 +1,15 @@
-'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../../lib/auth';
 import { useDashboard } from '../context';
+import { useRouter, usePathname } from 'next/navigation';
 
 export function Sidebar() {
   const { user } = useAuth();
   const { activePage, setActivePage } = useDashboard();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -24,13 +25,26 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleNavigation = (page: 'upload' | 'settings' | 'account') => {
+    if (pathname !== '/dashboard') {
+      if (page === 'upload') {
+        router.push('/dashboard');
+      } else {
+        router.push(`/dashboard?page=${page}`);
+      }
+    } else {
+      setActivePage(page);
+    }
+    setIsDropdownOpen(false);
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <button
-            onClick={() => setActivePage('upload')}
+            onClick={() => handleNavigation('upload')}
             className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
@@ -57,15 +71,11 @@ export function Sidebar() {
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-black/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg overflow-hidden">
                 <button
-                  onClick={() => {
-                    setActivePage('account');
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${
-                    activePage === 'account'
-                      ? 'bg-purple-500/20 text-purple-400'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => handleNavigation('account')}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${activePage === 'account' && pathname === '/dashboard'
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   <svg
                     className="w-5 h-5"
@@ -84,15 +94,11 @@ export function Sidebar() {
                 </button>
 
                 <button
-                  onClick={() => {
-                    setActivePage('settings');
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${
-                    activePage === 'settings'
-                      ? 'bg-purple-500/20 text-purple-400'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => handleNavigation('settings')}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${activePage === 'settings' && pathname === '/dashboard'
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   <svg
                     className="w-5 h-5"
