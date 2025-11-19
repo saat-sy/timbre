@@ -22,7 +22,7 @@ export function UploadPage() {
     try {
       setLoadingStep('uploading');
       onProgress?.('uploading');
-      
+
       // Call REST API endpoint (dummy for now)
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -51,12 +51,12 @@ export function UploadPage() {
         fileName: file.name,
         prompt,
       }));
-      
+
       setLoadingStep(null);
       onProgress?.(null);
       clearError();
       lastSubmission = null;
-      
+
       // Navigate to the video player page
       router.push(`/dashboard/${sessionId}`);
     } catch (err) {
@@ -76,11 +76,11 @@ export function UploadPage() {
   };
 
   return (
-    <div className="h-full px-6 flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Error Banner - fixed height to prevent layout shift */}
       <div className="flex justify-center pt-6 pb-4 min-h-[80px]">
         {error && (
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-4xl mx-auto px-6">
             <ErrorBanner
               error={error}
               title="Upload Failed"
@@ -95,7 +95,7 @@ export function UploadPage() {
       </div>
 
       {/* Centered Upload Interface - takes remaining space */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden mb-24">
+      <div className="flex-1 flex items-center justify-center overflow-hidden mt-12">
         <VideoUploadForm onSubmit={handleSubmit} />
       </div>
     </div>

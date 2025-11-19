@@ -11,12 +11,12 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <DashboardProvider>
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
-        {/* Sidebar */}
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+        {/* Top Bar */}
         <Sidebar />
         
         {/* Main Content */}
-        <main className="h-full pl-16 overflow-auto">
+        <main className="pt-16">
           {children}
         </main>
       </div>
