@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { withConfirmedAuth } from '../../../lib/auth';
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '../../../components/dashboard';
+import { DashboardLayout, CustomVideoPlayer } from '../../../components/dashboard';
 
 function VideoPlayerContent() {
   const params = useParams();
@@ -84,7 +84,7 @@ function VideoPlayerContent() {
   }
 
   return (
-    <div className="h-full p-6 animate-fadeIn">
+    <div className="h-full p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div>
@@ -94,14 +94,13 @@ function VideoPlayerContent() {
 
         {/* Video Player */}
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden animate-slideUp">
-          <video
+          <CustomVideoPlayer
             src={videoUrl}
-            controls
-            className="w-full aspect-video bg-black"
-            autoPlay
-          >
-            Your browser does not support the video tag.
-          </video>
+            initialPaused={true}
+            onTimeUpdate={(time: number) => console.log('Time update:', time)}
+            onPlay={() => console.log('Command: PLAY')}
+            onPause={() => console.log('Command: PAUSE')}
+          />
         </div>
 
         {/* Video Info */}
@@ -120,15 +119,6 @@ function VideoPlayerContent() {
       </div>
 
       <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
         @keyframes slideUp {
           from {
             opacity: 0;
@@ -140,9 +130,7 @@ function VideoPlayerContent() {
           }
         }
 
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
+
 
         .animate-slideUp {
           animation: slideUp 0.4s ease-out;

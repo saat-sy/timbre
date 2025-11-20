@@ -10,3 +10,6 @@ export { VideoUploadForm } from './upload';
 // Context
 export { DashboardProvider, useDashboard } from './context';
 export type { DashboardPage } from './context';
+
+// Video components
+export { CustomVideoPlayer } from './video';
