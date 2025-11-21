@@ -89,7 +89,7 @@ async def get_context(
 
             response_dict = config.dict()
             response_dict["temp_video_path"] = global_context_service.temp_video_path
-            
+
             return config.dict()
 
         except Exception as service_error:
@@ -125,7 +125,7 @@ async def music_websocket_endpoint(websocket: WebSocket):
             Commands.WEIGHT,
             Commands.CONTEXT,
             Commands.TRANSCRIPTION,
-            "temp_video_path"
+            "temp_video_path",
         ]
         missing_fields = [field for field in required_fields if not data.get(field)]
 
@@ -185,14 +185,16 @@ async def music_websocket_endpoint(websocket: WebSocket):
             logger.error("Invalid data type in parameters: %s", e)
             await websocket.close(code=1003, reason="Invalid parameter format")
             return
-        
+
         realtime_eval_service = RealtimeEvalService(
             transcription=transcription,
             global_config=global_config,
             temp_video_path=temp_video_path,
         )
 
-        lyria_service = LyriaService(user_websocket=websocket, realtime_eval_service=realtime_eval_service)
+        lyria_service = LyriaService(
+            user_websocket=websocket, realtime_eval_service=realtime_eval_service
+        )
         await lyria_service.start_session(lyria_config=lyria_config)
 
         logger.info("Lyria session started successfully")

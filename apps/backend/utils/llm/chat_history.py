@@ -1,5 +1,6 @@
 from typing import List
 
+
 # TODO: Implement summarization of the chat history to manage context length and increase speed.
 class ChatHistory:
     def __init__(self) -> None:
