@@ -16,7 +16,9 @@ logger = get_logger(__name__)
 
 
 class LyriaService:
-    def __init__(self, user_websocket: WebSocket, realtime_eval_service: RealtimeEvalService) -> None:
+    def __init__(
+        self, user_websocket: WebSocket, realtime_eval_service: RealtimeEvalService
+    ) -> None:
         logger.info("Initializing LyriaService")
         self.user_websocket = user_websocket
         self.model = "models/lyria-realtime-exp"
@@ -60,28 +62,40 @@ class LyriaService:
                             break
                         elif command[Commands.COMMAND] == Commands.EVALUATE:
                             logger.info("Starting evaluation process")
-                            await self.realtime_service.evaluate_segment(
+                            realtime_llm_response = await self.realtime_service.evaluate_segment(
                                 start_time=command.get(Commands.START_TIME, 0.0),
-                                end_time=command.get(Commands.END_TIME, float('inf')),
+                                end_time=command.get(Commands.END_TIME, float("inf")),
                             )
+                            await self.user_websocket.send_text(json.dumps(realtime_llm_response.dict()))
                             logger.info("Evaluation process completed")
                         elif command[Commands.COMMAND] == Commands.INJECT:
                             update_config = False
                             new_config = self.realtime_service.get_latest_config()
                             if self.current_config.bpm != new_config.bpm:
-                                logger.info("Injecting updated BPM: %d", self.realtime_service.get_latest_config().bpm)
+                                logger.info(
+                                    "Injecting updated BPM: %d",
+                                    self.realtime_service.get_latest_config().bpm,
+                                )
                                 self.config.bpm = new_config.bpm
                                 update_config = True
                                 logger.info("Updated BPM to %d", self.config.bpm)
                             if self.current_config.scale != new_config.scale:
-                                logger.info("Injecting updated Scale: %s", new_config.scale)
+                                logger.info(
+                                    "Injecting updated Scale: %s", new_config.scale
+                                )
                                 self.config.scale = new_config.get_lyria_scale()
                                 update_config = True
-                                logger.info("Updated Scale to %s", self.config.scale.name)
+                                logger.info(
+                                    "Updated Scale to %s", self.config.scale.name
+                                )
                             if update_config:
-                                await session.set_music_generation_config(config=self.config)
+                                await session.set_music_generation_config(
+                                    config=self.config
+                                )
                                 await session.reset_context()
-                                logger.info("Injected new configuration and reset context")
+                                logger.info(
+                                    "Injected new configuration and reset context"
+                                )
 
                             prompt_text = new_config.prompt
                             weight = new_config.weight

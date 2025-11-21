@@ -1,16 +1,9 @@
 from dataclasses import dataclass
+from typing import List
 from models.lyria_config import LyriaConfig
 
 
 @dataclass
 class LLMResponse:
-    lyria_config: LyriaConfig
-    context: str
-    transcription: str
-
-    def dict(self):
-        return {
-            "lyria_config": self.lyria_config.dict(),
-            "context": self.context,
-            "transcription": self.transcription,
-        }
+    scene_analysis: List[dict]
+    master_plan: str

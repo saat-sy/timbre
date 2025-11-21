@@ -12,5 +12,5 @@ class Commands:
     WEIGHT = "weight"
     CONTEXT = "context"
     TRANSCRIPTION = "transcription"
-    START_TIME = "start_time",
+    START_TIME = ("start_time",)
     END_TIME = "end_time"

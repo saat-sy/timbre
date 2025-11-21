@@ -23,7 +23,9 @@ class HelperUtils:
         except Exception as e:
             logger.error(f"Error removing temporary video file: {e}")
 
-    def trim_video(self, video_path: str, start_duration: float, end_duration: float) -> str:
+    def trim_video(
+        self, video_path: str, start_duration: float, end_duration: float
+    ) -> str:
         logger.info("Trimming video")
         timestamp = int(time.time() * 1000)
         trimmed_video_path = f"/tmp/trimmed_video_{timestamp}.mp4"

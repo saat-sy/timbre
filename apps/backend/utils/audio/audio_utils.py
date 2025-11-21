@@ -111,6 +111,7 @@ class AudioUtils:
 
         return json.loads(json.dumps(formatted))
 
+
 if __name__ == "__main__":
     import time
 
