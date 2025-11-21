@@ -17,13 +17,37 @@ interface UseAudioStreamProps {
     initialPaused?: boolean;
 }
 
+interface AudioChunk {
+    buffer: AudioBuffer;
+    startTime: number;
+    duration: number;
+}
+
 export function useAudioStream({ videoDuration, onStop, initialPaused = false }: UseAudioStreamProps) {
     const audioContextRef = useRef<AudioContext | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
-    const nextStartTimeRef = useRef<number>(0);
+
+    const audioChunksRef = useRef<AudioChunk[]>([]);
     const totalBufferedDurationRef = useRef<number>(0);
+
+    // Playback state
     const isPlayingRef = useRef<boolean>(false);
+    const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+    const isBufferingRef = useRef<boolean>(false);
+
+    // Time tracking
+    const currentMediaTimeRef = useRef<number>(0);
+    const playbackAnchorRef = useRef<{ contextTime: number, mediaTime: number } | null>(null);
+
     const [isReady, setIsReady] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
+    const [bufferedDuration, setBufferedDuration] = useState(0);
+
+    const videoDurationRef = useRef(videoDuration);
+
+    useEffect(() => {
+        videoDurationRef.current = videoDuration;
+    }, [videoDuration]);
 
     useEffect(() => {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -36,11 +60,88 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
         };
     }, [initialPaused]);
 
-    const videoDurationRef = useRef(videoDuration);
-
     useEffect(() => {
-        videoDurationRef.current = videoDuration;
-    }, [videoDuration]);
+        let animationFrameId: number;
+
+        const checkBuffer = () => {
+            if (isPlayingRef.current && !isBufferingRef.current && audioContextRef.current && playbackAnchorRef.current) {
+                const { contextTime, mediaTime } = playbackAnchorRef.current;
+                const currentTime = audioContextRef.current.currentTime;
+                const currentMediaTime = mediaTime + (currentTime - contextTime);
+
+                // Update current media time ref for other uses
+                currentMediaTimeRef.current = currentMediaTime;
+
+                // Check for underrun
+                // Threshold: 0.2s to avoid glitching
+                if (totalBufferedDurationRef.current < videoDurationRef.current &&
+                    totalBufferedDurationRef.current - currentMediaTime < 0.2) {
+
+                    console.log('Buffer underrun, buffering...');
+                    isBufferingRef.current = true;
+                    setIsBuffering(true);
+
+                    // Suspend context to pause "time"
+                    if (audioContextRef.current.state === 'running') {
+                        audioContextRef.current.suspend();
+                    }
+                }
+            }
+            animationFrameId = requestAnimationFrame(checkBuffer);
+        };
+
+        animationFrameId = requestAnimationFrame(checkBuffer);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, []);
+
+    const stopAllSources = useCallback(() => {
+        activeSourcesRef.current.forEach(source => {
+            try {
+                source.stop();
+            } catch (e) {
+                // Ignore
+            }
+        });
+        activeSourcesRef.current.clear();
+    }, []);
+
+    const schedulePlayback = useCallback(() => {
+        const audioContext = audioContextRef.current;
+        if (!audioContext || !playbackAnchorRef.current) return;
+
+        const { contextTime: anchorContextTime, mediaTime: anchorMediaTime } = playbackAnchorRef.current;
+        const currentContextTime = audioContext.currentTime;
+
+        audioChunksRef.current.forEach(chunk => {
+            // Calculate start time in context coordinates
+            const startTimeInContext = anchorContextTime + (chunk.startTime - anchorMediaTime);
+            const endTimeInContext = startTimeInContext + chunk.duration;
+
+            // If chunk is completely in the past, ignore
+            if (endTimeInContext <= currentContextTime) return;
+
+            let offset = 0;
+            let start = startTimeInContext;
+            let duration = chunk.duration;
+
+            if (startTimeInContext < currentContextTime) {
+                // Partial playback for currently playing chunk
+                offset = currentContextTime - startTimeInContext;
+                start = currentContextTime;
+                duration = chunk.duration - offset;
+            }
+
+            const source = audioContext.createBufferSource();
+            source.buffer = chunk.buffer;
+            source.connect(audioContext.destination);
+            source.start(start, offset, duration);
+
+            activeSourcesRef.current.add(source);
+            source.onended = () => {
+                activeSourcesRef.current.delete(source);
+            };
+        });
+    }, []);
 
     const connect = useCallback(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -49,7 +150,7 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
 
         // Reset state for new connection
         totalBufferedDurationRef.current = 0;
-        nextStartTimeRef.current = 0;
+        audioChunksRef.current = [];
 
         const ws = new WebSocket('ws://localhost:8000/ws/music');
         wsRef.current = ws;
@@ -86,20 +187,56 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
 
                 const audioBuffer = processAudioChunk(audioContext, event.data);
 
-                // Schedule playback
-                const source = audioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(audioContext.destination);
-
-                // Calculate start time
-                // If nextStartTime is in the past (due to lag/startup), reset to currentTime
-                const currentTime = audioContext.currentTime;
-                const startTime = Math.max(nextStartTimeRef.current, currentTime);
-
-                source.start(startTime);
-
-                nextStartTimeRef.current = startTime + audioBuffer.duration;
+                // Store chunk
+                const chunkStartTime = totalBufferedDurationRef.current;
+                const chunk: AudioChunk = {
+                    buffer: audioBuffer,
+                    startTime: chunkStartTime,
+                    duration: audioBuffer.duration
+                };
+                audioChunksRef.current.push(chunk);
                 totalBufferedDurationRef.current += audioBuffer.duration;
+                setBufferedDuration(totalBufferedDurationRef.current);
+
+                if (isPlayingRef.current) {
+                    if (isBufferingRef.current) {
+                        const bufferedAhead = totalBufferedDurationRef.current - currentMediaTimeRef.current;
+                        if (bufferedAhead > 1.0 || totalBufferedDurationRef.current >= videoDurationRef.current) {
+                            console.log('Buffer filled, resuming...');
+                            isBufferingRef.current = false;
+                            setIsBuffering(false);
+
+                            if (audioContext.state === 'suspended') {
+                                audioContext.resume();
+                            }
+                        }
+                    }
+
+                    if (playbackAnchorRef.current) {
+                        const { contextTime: anchorContextTime, mediaTime: anchorMediaTime } = playbackAnchorRef.current;
+                        const startTimeInContext = anchorContextTime + (chunk.startTime - anchorMediaTime);
+
+                        if (startTimeInContext + chunk.duration > audioContext.currentTime) {
+                            const source = audioContext.createBufferSource();
+                            source.buffer = chunk.buffer;
+                            source.connect(audioContext.destination);
+
+                            let start = startTimeInContext;
+                            let offset = 0;
+                            let duration = chunk.duration;
+
+                            if (start < audioContext.currentTime) {
+                                offset = audioContext.currentTime - start;
+                                start = audioContext.currentTime;
+                                duration -= offset;
+                            }
+
+                            source.start(start, offset, duration);
+                            activeSourcesRef.current.add(source);
+                            source.onended = () => activeSourcesRef.current.delete(source);
+                        }
+                    }
+                }
 
                 const currentVideoDuration = videoDurationRef.current;
                 if (currentVideoDuration > 0 && totalBufferedDurationRef.current >= currentVideoDuration) {
@@ -117,29 +254,79 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
 
         ws.onclose = () => {
             console.log('WebSocket closed');
-            setIsReady(false);
         };
 
     }, [onStop]);
 
+    const seek = useCallback((time: number) => {
+        if (!audioContextRef.current) return;
+
+        console.log(`Seeking to ${time}`);
+
+        currentMediaTimeRef.current = time;
+
+        // Reset buffering state on seek
+        isBufferingRef.current = false;
+        setIsBuffering(false);
+
+        if (isPlayingRef.current) {
+            stopAllSources();
+
+            playbackAnchorRef.current = {
+                contextTime: audioContextRef.current.currentTime,
+                mediaTime: time
+            };
+
+            schedulePlayback();
+        }
+    }, [schedulePlayback, stopAllSources]);
+
     const play = useCallback(() => {
-        if (audioContextRef.current?.state === 'suspended') {
+        if (!audioContextRef.current) return;
+
+        if (audioContextRef.current.state === 'suspended') {
             audioContextRef.current.resume();
         }
+
         isPlayingRef.current = true;
-        // If not connected, connect now
+
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.log('Play called but WebSocket not ready, connecting...');
-            connect();
+            if (audioChunksRef.current.length === 0) {
+                console.log('Play called but WebSocket not ready, connecting...');
+                connect();
+                return;
+            }
         }
-    }, [connect]);
+
+        playbackAnchorRef.current = {
+            contextTime: audioContextRef.current.currentTime,
+            mediaTime: currentMediaTimeRef.current
+        };
+
+        schedulePlayback();
+
+    }, [connect, schedulePlayback]);
 
     const pause = useCallback(() => {
-        if (audioContextRef.current?.state === 'running') {
+        if (!audioContextRef.current) return;
+
+        if (playbackAnchorRef.current) {
+            const elapsed = audioContextRef.current.currentTime - playbackAnchorRef.current.contextTime;
+            currentMediaTimeRef.current = playbackAnchorRef.current.mediaTime + elapsed;
+        }
+
+        if (audioContextRef.current.state === 'running') {
             audioContextRef.current.suspend();
         }
+
+        stopAllSources();
         isPlayingRef.current = false;
-    }, []);
+        playbackAnchorRef.current = null;
+
+        // Reset buffering state
+        isBufferingRef.current = false;
+        setIsBuffering(false);
+    }, [stopAllSources]);
 
     const stop = useCallback(() => {
         wsRef.current?.close();
@@ -147,14 +334,24 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
         audioContextRef.current?.close();
         isPlayingRef.current = false;
         setIsReady(false);
-        nextStartTimeRef.current = 0;
+
+        stopAllSources();
+        audioChunksRef.current = [];
         totalBufferedDurationRef.current = 0;
-    }, []);
+        currentMediaTimeRef.current = 0;
+        playbackAnchorRef.current = null;
+
+        isBufferingRef.current = false;
+        setIsBuffering(false);
+    }, [stopAllSources]);
 
     return {
         play,
         pause,
         stop,
-        isReady
+        seek,
+        isReady,
+        isBuffering,
+        bufferedDuration
     };
 }

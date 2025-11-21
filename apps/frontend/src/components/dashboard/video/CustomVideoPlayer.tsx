@@ -29,7 +29,7 @@ export function CustomVideoPlayer({
         console.log('Audio stream stopped');
     }, []);
 
-    const { play: playAudio, pause: pauseAudio, stop: stopAudio, isReady } = useAudioStream({
+    const { play: playAudio, pause: pauseAudio, stop: stopAudio, seek, isReady, isBuffering, bufferedDuration } = useAudioStream({
         videoDuration: duration,
         onStop: handleAudioStop,
         initialPaused: initialPaused,
@@ -99,6 +99,20 @@ export function CustomVideoPlayer({
         }
     }, [isConnecting, isReady, togglePlay]);
 
+    // Handle buffering state
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (isBuffering) {
+            video.pause();
+        } else if (isPlaying && !video.ended && !video.paused) {
+            video.play().catch(() => { });
+        } else if (isPlaying && video.paused && !video.ended) {
+            video.play().catch(() => { });
+        }
+    }, [isBuffering, isPlaying]);
+
     const handleTimeUpdate = () => {
         const video = videoRef.current;
         if (!video) return;
@@ -119,7 +133,6 @@ export function CustomVideoPlayer({
     };
 
     const [isDragging, setIsDragging] = useState(false);
-    const [maxSeekTime, setMaxSeekTime] = useState<number | null>(null);
     const [wasPlayingBeforeDrag, setWasPlayingBeforeDrag] = useState(false);
     const progressBarRef = useRef<HTMLDivElement>(null);
 
@@ -127,17 +140,21 @@ export function CustomVideoPlayer({
         const handleGlobalMouseUp = () => {
             if (isDragging) {
                 setIsDragging(false);
-                setMaxSeekTime(null);
                 if (wasPlayingBeforeDrag) {
                     videoRef.current?.play().catch(() => { });
                     playAudio();
                     setIsPlaying(true);
                 }
+
+                // Seek audio to new position
+                if (videoRef.current) {
+                    seek(videoRef.current.currentTime);
+                }
             }
         };
 
         const handleGlobalMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !progressBarRef.current || !videoRef.current || maxSeekTime === null) return;
+            if (!isDragging || !progressBarRef.current || !videoRef.current) return;
 
             const rect = progressBarRef.current.getBoundingClientRect();
             const x = e.clientX - rect.left;
@@ -145,8 +162,8 @@ export function CustomVideoPlayer({
             const percentage = Math.max(0, Math.min(1, x / width));
             const targetTime = percentage * videoRef.current.duration;
 
-            // Clamp to maxSeekTime (backward only)
-            const newTime = Math.min(targetTime, maxSeekTime);
+            // Clamp to buffered duration
+            const newTime = Math.min(targetTime, bufferedDuration);
 
             videoRef.current.currentTime = newTime;
             setCurrentTime(newTime);
@@ -161,7 +178,7 @@ export function CustomVideoPlayer({
             window.removeEventListener('mouseup', handleGlobalMouseUp);
             window.removeEventListener('mousemove', handleGlobalMouseMove);
         };
-    }, [isDragging, maxSeekTime, wasPlayingBeforeDrag, playAudio]);
+    }, [isDragging, wasPlayingBeforeDrag, playAudio, bufferedDuration]);
 
     const handleSeekStart = (e: React.MouseEvent<HTMLDivElement>) => {
         const video = videoRef.current;
@@ -177,22 +194,25 @@ export function CustomVideoPlayer({
         const percentage = Math.max(0, Math.min(1, x / width));
         const targetTime = percentage * video.duration;
 
-        // Initial click check - only allow if backward
-        if (targetTime < video.currentTime) {
+        // Allow seek if within buffered range (with a small buffer for floating point)
+        if (targetTime <= bufferedDuration + 0.5) {
             setWasPlayingBeforeDrag(!video.paused);
             video.pause();
             pauseAudio();
             setIsPlaying(false);
 
             setIsDragging(true);
-            setMaxSeekTime(video.currentTime); // Lock the furthest point we can go to
 
-            video.currentTime = targetTime;
-            setCurrentTime(targetTime);
+            // Clamp initial click too
+            const newTime = Math.min(targetTime, bufferedDuration);
+
+            video.currentTime = newTime;
+            setCurrentTime(newTime);
         }
     };
 
     const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+    const bufferPercentage = duration > 0 ? (bufferedDuration / duration) * 100 : 0;
 
     return (
         <div className="relative group bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10">
@@ -215,11 +235,18 @@ export function CustomVideoPlayer({
                 {/* Progress Bar */}
                 <div
                     ref={progressBarRef}
-                    className="w-full h-1.5 bg-white/20 rounded-full mb-4 overflow-hidden cursor-pointer pointer-events-auto hover:h-2.5 transition-all"
+                    className="w-full h-1.5 bg-white/20 rounded-full mb-4 overflow-hidden cursor-pointer pointer-events-auto hover:h-2.5 transition-all relative"
                     onMouseDown={handleSeekStart}
                 >
+                    {/* Buffer Bar */}
                     <div
-                        className="h-full bg-purple-500 rounded-full transition-all duration-100 ease-linear relative"
+                        className="absolute top-0 left-0 h-full bg-white/30 transition-all duration-300 ease-linear"
+                        style={{ width: `${Math.min(bufferPercentage, 100)}%` }}
+                    />
+
+                    {/* Playback Progress */}
+                    <div
+                        className="h-full bg-purple-500 rounded-full transition-all duration-100 ease-linear relative z-10"
                         style={{ width: `${progressPercentage}%` }}
                     />
                 </div>
@@ -259,9 +286,9 @@ export function CustomVideoPlayer({
                             e.stopPropagation();
                             togglePlay();
                         }}
-                        className={`w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 pointer-events-auto cursor-pointer hover:scale-110 transition-transform ${isConnecting ? 'cursor-wait' : ''}`}
+                        className={`w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 pointer-events-auto cursor-pointer hover:scale-110 transition-transform ${isConnecting || isBuffering ? 'cursor-wait' : ''}`}
                     >
-                        {!isConnecting ? (
+                        {!isConnecting && !isBuffering ? (
                             <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                             </svg>
@@ -269,6 +296,13 @@ export function CustomVideoPlayer({
                             <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Buffering Spinner Overlay (when playing but buffering) */}
+            {isPlaying && isBuffering && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 backdrop-blur-[1px]">
+                    <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
             )}
         </div>
