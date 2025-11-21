@@ -17,10 +17,12 @@ class VideoUtils:
         self.helper_utils = HelperUtils()
         self.temp_video_path = temp_video_path
 
-    def get_unique_frames(self, video: bytes, start_duration: Optional[float] = None, end_duration: Optional[float] = None) -> list[Frame]:
+    def get_unique_frames(self, start_duration: Optional[float] = None, end_duration: Optional[float] = None) -> list[Frame]:
         try:
             logger.info("Getting unique frames from video")
+            self.global_eval = True
             if start_duration is not None or end_duration is not None:
+                self.global_eval = False
                 self.temp_video_path = self.helper_utils.trim_video(
                     video_path=self.temp_video_path,
                     start_duration=start_duration if start_duration is not None else 0.0,
@@ -44,6 +46,30 @@ class VideoUtils:
         fps = cap.get(cv2.CAP_PROP_FPS)
 
         try:
+            if not self.global_eval:
+                logger.info("Getting frame for every second")
+                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                duration = total_frames / fps
+
+                for second in range(int(duration) + 1):
+                    frame_num = int(second * fps)
+                    if frame_num >= total_frames:
+                        break
+                        
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+                    ret, frame = cap.read()
+                    
+                    if ret:
+                        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                        frame_data = base64.b64encode(buffer.tobytes()).decode('utf-8')
+                        frame_obj = Frame(data=frame_data, timestamp=second)
+                        best_frames.append(frame_obj)
+                        logger.info(f"Selected frame at {second}s")
+
+                logger.info(f"Selected {len(best_frames)} frames for realtime evaluation")
+
+                return best_frames 
+
             for scene_start_tc, scene_end_tc in self.scenes:
                 logger.info(f"Processing scene from {scene_start_tc} to {scene_end_tc}")
 
@@ -51,36 +77,17 @@ class VideoUtils:
                 end_frame = int(scene_end_tc * fps)
 
                 best_frame = None
-                best_sharpness = -1
-                best_timestamp = 0
+                middle_frame = (start_frame + end_frame) // 2
+                cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame)
+                ret, frame = cap.read()
 
-                frame_step = max(1, (end_frame - start_frame) // 20)
-
-                for frame_num in range(start_frame, end_frame, frame_step):
-                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-                    ret, frame = cap.read()
-
-                    if not ret:
-                        continue
-
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    sharpness = cv2.Laplacian(gray, cv2.CV_64F).var()
-
-                    if sharpness > best_sharpness:
-                        best_sharpness = sharpness
-                        _, buffer = cv2.imencode(
-                            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 95]
-                        )
-                        best_frame = base64.b64encode(buffer.tobytes()).decode('utf-8')
-                        best_timestamp = frame_num / fps
-
-                if best_frame is not None:
-                    frame_obj = Frame(data=best_frame, timestamp=best_timestamp)
-                    best_frames.append(frame_obj)
-                    logger.info(
-                        f"Selected frame at {best_timestamp:.2f}s with sharpness {best_sharpness:.2f}"
-                    )
-
+                if ret:
+                    _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+                    frame_data = base64.b64encode(buffer.tobytes()).decode('utf-8')
+                    timestamp = middle_frame / fps
+                    best_frame = Frame(data=frame_data, timestamp=timestamp)
+                    best_frames.append(best_frame)
+                    logger.info(f"Selected middle frame at {timestamp:.2f}s for scene {scene_start_tc:.2f}s-{scene_end_tc:.2f}s")
         finally:
             cap.release()
 
@@ -140,6 +147,7 @@ class VideoUtils:
         self.scenes = []
         for scene_start, scene_end in scene_list:
             self.scenes.append((scene_start.get_seconds(), scene_end.get_seconds()))
+        logger.info(f"Detected {len(self.scenes)} scenes in the video")
 
 if __name__ == "__main__":
     import time
@@ -150,6 +158,6 @@ if __name__ == "__main__":
     helper_utils = HelperUtils()
     temp_video_path = helper_utils.create_temp_file(video=video_bytes)
     video_utils = VideoUtils(temp_video_path=temp_video_path)
-    frames = video_utils.get_unique_frames(video=video_bytes)
+    frames = video_utils.get_unique_frames(start_duration=10.0, end_duration=10.0)
     end_time = time.time()
     logger.info(f"Extracted {len(frames)} unique frames in {end_time - start_time:.2f} seconds")
