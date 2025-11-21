@@ -110,3 +110,17 @@ class AudioUtils:
                 continue
 
         return json.loads(json.dumps(formatted))
+
+if __name__ == "__main__":
+    import time
+
+    start_time = time.time()
+    audio_utils = AudioUtils()
+
+    with open("test.mp4", "rb") as f:
+        video_bytes = f.read()
+
+    transcription = audio_utils.get_transcription(video_bytes)
+    end_time = time.time()
+    logger.info(f"Transcription completed in {end_time - start_time:.2f} seconds")
+    logger.info(f"Transcription: {transcription}")
