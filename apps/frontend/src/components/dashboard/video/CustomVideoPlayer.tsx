@@ -1,6 +1,8 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+
+import { useAudioStream } from './useAudioStream';
 
 interface CustomVideoPlayerProps {
     src: string;
@@ -21,35 +23,81 @@ export function CustomVideoPlayer({
     const [isPlaying, setIsPlaying] = useState(!initialPaused);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [isConnecting, setIsConnecting] = useState(false);
+
+    const handleAudioStop = useCallback(() => {
+        console.log('Audio stream stopped');
+    }, []);
+
+    const { play: playAudio, pause: pauseAudio, stop: stopAudio, isReady } = useAudioStream({
+        videoDuration: duration,
+        onStop: handleAudioStop,
+        initialPaused: initialPaused,
+    });
+
+    const initialPauseApplied = useRef(false);
 
     useEffect(() => {
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || initialPauseApplied.current) return;
+
+        initialPauseApplied.current = true;
 
         if (initialPaused) {
             video.pause();
         } else {
-            video.play().catch(() => {
-                // Auto-play might be blocked
-                setIsPlaying(false);
-            });
+            video.play()
+                .then(() => {
+                    playAudio();
+                })
+                .catch(() => {
+                    // Auto-play might be blocked
+                    setIsPlaying(false);
+                });
         }
-    }, [initialPaused]);
+    }, [initialPaused, playAudio, pauseAudio]);
 
-    const togglePlay = () => {
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopAudio();
+        };
+    }, [stopAudio]);
+
+    const togglePlay = useCallback(async () => {
         const video = videoRef.current;
         if (!video) return;
 
+        if (!isReady && video.paused) {
+            setIsConnecting(true);
+            playAudio();
+            return;
+        }
+
         if (video.paused) {
-            video.play();
-            setIsPlaying(true);
-            onPlay?.();
+            try {
+                await video.play();
+                playAudio();
+                setIsPlaying(true);
+                onPlay?.();
+            } catch (error) {
+                console.error('Error playing video:', error);
+                setIsPlaying(false);
+            }
         } else {
             video.pause();
+            pauseAudio();
             setIsPlaying(false);
             onPause?.();
         }
-    };
+    }, [isReady, playAudio, pauseAudio, onPlay, onPause]);
+
+    useEffect(() => {
+        if (isConnecting && isReady) {
+            setIsConnecting(false);
+            togglePlay();
+        }
+    }, [isConnecting, isReady, togglePlay]);
 
     const handleTimeUpdate = () => {
         const video = videoRef.current;
@@ -82,6 +130,7 @@ export function CustomVideoPlayer({
                 setMaxSeekTime(null);
                 if (wasPlayingBeforeDrag) {
                     videoRef.current?.play().catch(() => { });
+                    playAudio();
                     setIsPlaying(true);
                 }
             }
@@ -112,7 +161,7 @@ export function CustomVideoPlayer({
             window.removeEventListener('mouseup', handleGlobalMouseUp);
             window.removeEventListener('mousemove', handleGlobalMouseMove);
         };
-    }, [isDragging, maxSeekTime, wasPlayingBeforeDrag]);
+    }, [isDragging, maxSeekTime, wasPlayingBeforeDrag, playAudio]);
 
     const handleSeekStart = (e: React.MouseEvent<HTMLDivElement>) => {
         const video = videoRef.current;
@@ -132,6 +181,7 @@ export function CustomVideoPlayer({
         if (targetTime < video.currentTime) {
             setWasPlayingBeforeDrag(!video.paused);
             video.pause();
+            pauseAudio();
             setIsPlaying(false);
 
             setIsDragging(true);
@@ -152,7 +202,10 @@ export function CustomVideoPlayer({
                 className="w-full aspect-video object-contain cursor-pointer"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
-                onEnded={() => setIsPlaying(false)}
+                onEnded={() => {
+                    setIsPlaying(false);
+                    pauseAudio();
+                }}
                 onClick={togglePlay}
             />
 
@@ -206,11 +259,15 @@ export function CustomVideoPlayer({
                             e.stopPropagation();
                             togglePlay();
                         }}
-                        className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 pointer-events-auto cursor-pointer hover:scale-110 transition-transform"
+                        className={`w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 pointer-events-auto cursor-pointer hover:scale-110 transition-transform ${isConnecting ? 'cursor-wait' : ''}`}
                     >
-                        <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
+                        {!isConnecting ? (
+                            <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        ) : (
+                            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        )}
                     </div>
                 </div>
             )}
