@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 
 import { useAudioStream } from './useAudioStream';
+import { MusicalContextDisplay } from './MusicalContextDisplay';
 
 interface CustomVideoPlayerProps {
     src: string;
@@ -31,7 +32,7 @@ export function CustomVideoPlayer({
         console.log('Audio stream stopped');
     }, []);
 
-    const { play: playAudio, pause: pauseAudio, stop: stopAudio, seek, isReady, isBuffering, bufferedDuration } = useAudioStream({
+    const { play: playAudio, pause: pauseAudio, stop: stopAudio, seek, isReady, isBuffering, bufferedDuration, musicalContext } = useAudioStream({
         videoDuration: duration,
         onStop: handleAudioStop,
         initialPaused: initialPaused,
@@ -301,6 +302,13 @@ export function CustomVideoPlayer({
                     </div>
                 </div>
             )}
+
+            {/* Musical Context Display Overlay */}
+            <div className="absolute top-4 right-4 z-20 w-80 pointer-events-none">
+                <div className="pointer-events-auto">
+                    <MusicalContextDisplay context={musicalContext} currentTime={currentTime} />
+                </div>
+            </div>
 
             {/* Buffering Spinner Overlay (when playing but buffering) */}
             {isPlaying && isBuffering && (

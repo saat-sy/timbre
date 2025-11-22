@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { processAudioChunk } from './audioUtils';
+import { MusicalContext } from './MusicalContextDisplay';
 
 interface UseAudioStreamProps {
     videoDuration: number;
@@ -33,6 +34,8 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
     const [isReady, setIsReady] = useState(false);
     const [isBuffering, setIsBuffering] = useState(false);
     const [bufferedDuration, setBufferedDuration] = useState(0);
+
+    const [musicalContext, setMusicalContext] = useState<MusicalContext | null>(null);
 
     const videoDurationRef = useRef(videoDuration);
 
@@ -163,6 +166,17 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
                 console.log('Received string message:', event.data);
                 if (event.data === 'PLAYING') {
                     setIsReady(true);
+                    return;
+                }
+
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.global_context && data.musical_blocks) {
+                        console.log('Received musical context:', data);
+                        setMusicalContext(data);
+                    }
+                } catch (e) {
+                    // Not JSON or not the message we expect
                 }
                 return;
             }
@@ -329,6 +343,7 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
 
         isBufferingRef.current = false;
         setIsBuffering(false);
+        setMusicalContext(null);
     }, [stopAllSources]);
 
     return {
@@ -338,6 +353,8 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
         seek,
         isReady,
         isBuffering,
-        bufferedDuration
+        bufferedDuration,
+        musicalContext
     };
 }
+
