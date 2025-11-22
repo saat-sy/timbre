@@ -3,9 +3,8 @@ from groq import Groq
 from typing import List, Optional
 from dotenv import load_dotenv
 import concurrent.futures
-from models.llm_response import LLMResponse
+from models.llm_response import LLMResponse, MasterPlan
 from models.frame import Frame
-from models.realtime_llm_response import RealtimeLLMResponse
 from shared.logging import get_logger
 from utils.llm.chat_history import ChatHistory
 from utils.llm.prompts import Prompts
@@ -135,6 +134,8 @@ class LLMUtils:
                         _ = future_to_chunk[future]
                         logger.error(f"Chunk processing generated an exception: {exc}")
 
+            logger.info("Generating master plan based on scene analysis.")
+            
             global_prompt = Prompts.get_global_summary_plan_prompt(
                 scenes=scene_analysis, transcription=transcript
             )
@@ -142,24 +143,46 @@ class LLMUtils:
             messages = []
             messages.append({"role": "user", "content": global_prompt})
 
-            response = LLMValidators.make_api_call_with_retry(
-                self.client,
-                self.MAX_RETRIES,
-                self.RETRY_DELAY,
-                self.API_TIMEOUT,
-                model=self.reasoning_model,
-                messages=messages,
-                stream=False,
-                temperature=0.7,
-            )
+            master_plan = None
+            for attempt in range(self.MAX_RETRIES):
+                try:
+                    response = LLMValidators.make_api_call_with_retry(
+                        self.client,
+                        self.MAX_RETRIES,
+                        self.RETRY_DELAY,
+                        self.API_TIMEOUT,
+                        model=self.reasoning_model,
+                        messages=messages,
+                        stream=False,
+                        temperature=0.7,
+                    )
 
-            if not response.choices or not response.choices[0].message.content:
-                logger.error("No content in LLM response for master plan")
-                raise ValueError("No content in LLM response for master plan")
+                    if not response.choices or not response.choices[0].message.content:
+                        logger.error("No content in LLM response for master plan")
+                        raise ValueError("No content in LLM response for master plan")
+
+                    logger.info(response.choices[0].message.content)
+
+                    master_plan = LLMValidators.validate_master_plan_response(
+                        response.choices[0].message.content
+                    )
+                    break
+                    
+                except Exception as parse_error:
+                    logger.warning(f"Master plan parse attempt {attempt + 1} failed: {parse_error}")
+                    
+                    if attempt < self.MAX_RETRIES - 1:
+                        logger.info(f"Retrying master plan generation due to parsing failure (attempt {attempt + 2}/{self.MAX_RETRIES})")
+                    else:
+                        logger.error(f"All master plan parsing attempts failed. Last error: {parse_error}")
+                        raise parse_error
+            
+            if master_plan is None:
+                raise ValueError("Failed to generate valid master plan after all retries")
 
             return LLMResponse(
                 scene_analysis=scene_analysis,
-                master_plan=response.choices[0].message.content.strip(),
+                master_plan=master_plan,
             )
 
         except Exception as e:
@@ -168,5 +191,8 @@ class LLMUtils:
             )
             return LLMResponse(
                 scene_analysis=[],
-                master_plan="Default master plan due to error in get_global_config",
+                master_plan=MasterPlan(
+                    global_context="Default Concept",
+                    musical_blocks=[],
+                ),
             )
