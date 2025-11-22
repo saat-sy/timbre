@@ -1,6 +1,7 @@
 import json
 import uuid
-import aioredis
+import asyncio
+import redis
 from typing import Optional, Dict, Any
 from models.llm_response import LLMResponse, MasterPlan, MusicBlocks
 from models.lyria_config import LyriaConfig
@@ -14,16 +15,17 @@ class RedisService:
         self, redis_url: str = "redis://localhost:6379", session_ttl: int = 3600
     ):
         self.redis_url = redis_url
-        self.redis_client: Optional[aioredis.Redis] = None
+        self.redis_client: Optional[redis.Redis] = None
         self.session_prefix = "session:"
         self.session_ttl = session_ttl
 
     async def connect(self):
         try:
-            self.redis_client = aioredis.from_url(
+            self.redis_client = redis.from_url(
                 self.redis_url, encoding="utf-8", decode_responses=True
             )
-            await self.redis_client.ping()
+            if self.redis_client:
+                await asyncio.to_thread(self.redis_client.ping)
             logger.info("Successfully connected to Redis")
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {e}")
@@ -31,7 +33,7 @@ class RedisService:
 
     async def disconnect(self):
         if self.redis_client:
-            await self.redis_client.close()
+            await asyncio.to_thread(self.redis_client.close)
             logger.info("Redis connection closed")
 
     async def store_session(self, llm_response: LLMResponse) -> str:
@@ -47,7 +49,8 @@ class RedisService:
 
             session_data = self._llm_response_to_dict(llm_response)
 
-            await self.redis_client.setex(
+            await asyncio.to_thread(
+                self.redis_client.setex,
                 session_key, self.session_ttl, json.dumps(session_data)
             )
 
@@ -67,13 +70,13 @@ class RedisService:
 
         try:
             session_key = f"{self.session_prefix}{session_id}"
-            session_data = await self.redis_client.get(session_key)
+            session_data = await asyncio.to_thread(self.redis_client.get, session_key)
 
             if session_data is None:
                 logger.warning(f"Session {session_id} not found")
                 return None
 
-            data_dict = json.loads(session_data)
+            data_dict = json.loads(str(session_data))
             llm_response = self._dict_to_llm_response(data_dict)
 
             logger.info(f"Session {session_id} retrieved successfully")
@@ -92,7 +95,7 @@ class RedisService:
 
         try:
             session_key = f"{self.session_prefix}{session_id}"
-            deleted = await self.redis_client.delete(session_key)
+            deleted = await asyncio.to_thread(self.redis_client.delete, session_key)
 
             if deleted:
                 logger.info(f"Session {session_id} deleted successfully")
@@ -116,7 +119,7 @@ class RedisService:
             session_key = f"{self.session_prefix}{session_id}"
             ttl = ttl or self.session_ttl
 
-            exists = await self.redis_client.expire(session_key, ttl)
+            exists = await asyncio.to_thread(self.redis_client.expire, session_key, ttl)
 
             if exists:
                 logger.info(f"Session {session_id} TTL extended to {ttl} seconds")
