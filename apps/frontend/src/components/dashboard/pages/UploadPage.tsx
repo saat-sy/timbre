@@ -29,8 +29,9 @@ export function UploadPage() {
       setLoadingStep('uploading');
       onProgress?.('uploading');
 
-      // Call REST API endpoint (dummy for now)
-      const response = await fetch('/api/upload', {
+      // Call REST API endpoint
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/context`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,7 +49,7 @@ export function UploadPage() {
       }
 
       const data = await response.json();
-      const sessionId = data.sessionId;
+      const sessionId = data.session_id;
 
       // Store video URL in sessionStorage for the video player page
       const videoUrl = URL.createObjectURL(file);

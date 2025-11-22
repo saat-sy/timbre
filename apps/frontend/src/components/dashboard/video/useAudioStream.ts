@@ -1,16 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { processAudioChunk } from './audioUtils';
 
-interface AudioStreamConfig {
-    prompt: string;
-    bpm: number;
-    scale: string;
-    weight: string;
-    context: string;
-    transcription: Record<string, unknown>;
-    temp_video_path: string;
-}
-
 interface UseAudioStreamProps {
     videoDuration: number;
     onStop?: () => void;
@@ -152,24 +142,31 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
         totalBufferedDurationRef.current = 0;
         audioChunksRef.current = [];
 
-        const ws = new WebSocket('ws://localhost:8000/ws/music');
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/music';
+        const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
         ws.binaryType = 'arraybuffer';
 
-        ws.onopen = () => {
+        ws.onopen = async () => {
             console.log('WebSocket connected');
-            const initialMessage: AudioStreamConfig = {
-                prompt: "heavy piano",
-                bpm: 120,
-                scale: "C_MAJOR_A_MINOR",
-                weight: "1.0",
-                context: "dummy",
-                transcription: {
-                    "dum": "my",
-                },
-                temp_video_path: "custom_dummy"
-            };
-            ws.send(JSON.stringify(initialMessage));
+
+            try {
+                // Fetch session ID
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                const response = await fetch(`${apiUrl}/api/context`);
+                const data = await response.json();
+                const sessionId = data.session_id;
+
+                if (!sessionId) {
+                    console.error('No session ID received');
+                    return;
+                }
+
+                ws.send(JSON.stringify({ session_id: sessionId }));
+            } catch (error) {
+                console.error('Error fetching session ID:', error);
+                ws.close();
+            }
         };
 
         ws.onmessage = async (event) => {
