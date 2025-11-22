@@ -6,8 +6,7 @@ from groq.types.chat import ChatCompletion
 from typing import Dict, List
 from models.frame import Frame
 from models.lyria_config import LyriaConfig
-from models.llm_response import LLMResponse
-from models.realtime_llm_response import RealtimeLLMResponse, Analysis
+from models.llm_response import LLMResponse, MasterPlan
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -166,71 +165,6 @@ class LLMValidators:
             return []
 
     @staticmethod
-    def parse_realtime_llm_response(response: ChatCompletion) -> RealtimeLLMResponse:
-        try:
-            logger.info("Parsing real-time configuration response from LLM.")
-            content = response.choices[0].message.content
-            if content:
-                config_data = json.loads(content)
-
-                analysis_data = config_data.get("analysis", {})
-                analysis = Analysis(
-                    plan_instruction=analysis_data.get("plan_instruction", ""),
-                    reality_check=analysis_data.get("reality_check", ""),
-                    decision=analysis_data.get("decision", ""),
-                )
-
-                change_music = config_data.get("change_music", False)
-                change_music_at = config_data.get("change_music_at", None)
-
-                if change_music_at is not None:
-                    if not isinstance(change_music_at, (int, float)):
-                        logger.warning(
-                            f"Invalid change_music_at type: {type(change_music_at)}. Converting to float."
-                        )
-                        try:
-                            change_music_at = float(change_music_at)
-                        except (ValueError, TypeError):
-                            logger.error(
-                                f"Cannot convert change_music_at to float: {change_music_at}"
-                            )
-                            change_music_at = None
-                    else:
-                        change_music_at = float(change_music_at)
-
-                lyria_config_data = config_data.get("lyria_config", None)
-                lyria_config_obj = None
-
-                if lyria_config_data:
-                    lyria_config_obj = LLMValidators.create_lyria_config(
-                        lyria_config_data
-                    )
-
-                return RealtimeLLMResponse(
-                    analysis=analysis,
-                    change_music=change_music,
-                    change_music_at=change_music_at,
-                    lyria_config=lyria_config_obj,
-                )
-            else:
-                raise ValueError("No content in LLM response.")
-        except Exception as e:
-            logger.error(
-                f"Unexpected error: {e}. Using default real-time configuration."
-            )
-            default_analysis = Analysis(
-                plan_instruction="Default analysis due to unexpected error",
-                reality_check="Default analysis due to unexpected error",
-                decision="Default analysis due to unexpected error",
-            )
-            return RealtimeLLMResponse(
-                analysis=default_analysis,
-                change_music=False,
-                change_music_at=None,
-                lyria_config=None,
-            )
-
-    @staticmethod
     def chunk_frames(frames: List[Frame], chunk_size: int) -> List[List[Frame]]:
         chunks = []
         for i in range(0, len(frames), chunk_size):
@@ -269,3 +203,84 @@ class LLMValidators:
                 continue
 
         return filtered_transcript
+    
+    @staticmethod
+    def validate_master_plan_response(content: str) -> MasterPlan:
+        try:
+            logger.info("Parsing master plan response from LLM.")
+            data = json.loads(content)
+            
+            if "global_context" not in data:
+                raise ValueError("Missing 'global_context' in master plan response")
+            
+            if "musical_blocks" not in data:
+                raise ValueError("Missing 'musical_blocks' in master plan response")
+            
+            global_context = data["global_context"]
+            if not isinstance(global_context, str) or not global_context.strip():
+                raise ValueError("global_context must be a non-empty string")
+            
+            music_blocks_data = data["musical_blocks"]
+            if not isinstance(music_blocks_data, list):
+                raise ValueError("musical_blocks must be a list")
+            
+            music_blocks = []
+            for i, block_data in enumerate(music_blocks_data):
+                if not isinstance(block_data, dict):
+                    raise ValueError(f"Music block {i} must be a dictionary")
+                
+                required_block_fields = ["time_range", "musical_direction", "transition", "lyria_config"]
+                for field in required_block_fields:
+                    if field not in block_data:
+                        raise ValueError(f"Music block {i} missing required field: {field}")
+                
+                time_range = block_data["time_range"]
+                if not isinstance(time_range, dict):
+                    raise ValueError(f"Music block {i} time_range must be a dictionary")
+                
+                if "start" not in time_range or "end" not in time_range:
+                    raise ValueError(f"Music block {i} time_range must have 'start' and 'end' fields")
+                
+                try:
+                    start = float(time_range["start"])
+                    end = float(time_range["end"])
+                    LLMValidators.validate_duration(start, end)
+                    time_range = {"start": start, "end": end}
+                except (ValueError, TypeError) as e:
+                    raise ValueError(f"Music block {i} has invalid time_range: {e}")
+                
+                musical_direction = block_data["musical_direction"]
+                if not isinstance(musical_direction, str) or not musical_direction.strip():
+                    raise ValueError(f"Music block {i} musical_direction must be a non-empty string")
+                
+                transition = block_data["transition"]
+                if not isinstance(transition, str) or not transition.strip():
+                    raise ValueError(f"Music block {i} transition must be a non-empty string")
+                
+                lyria_config_data = block_data["lyria_config"]
+                if not isinstance(lyria_config_data, dict):
+                    raise ValueError(f"Music block {i} lyria_config must be a dictionary")
+                
+                lyria_config = LLMValidators.create_lyria_config(lyria_config_data)
+                
+                from models.llm_response import MusicBlocks
+                music_block = MusicBlocks(
+                    time_range=time_range,
+                    musical_direction=musical_direction,
+                    transition=transition,
+                    lyria_config=lyria_config
+                )
+                music_blocks.append(music_block)
+            
+            return MasterPlan(
+                global_context=global_context,
+                musical_blocks=music_blocks
+            )
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in master plan response: {e}")
+            raise ValueError(f"Invalid JSON format in master plan response: {e}")
+        except Exception as e:
+            logger.error(f"Error validating master plan response: {e}")
+            raise ValueError(f"Error parsing master plan response: {e}")
+

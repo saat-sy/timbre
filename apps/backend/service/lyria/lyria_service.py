@@ -6,7 +6,6 @@ from google.genai.live_music import AsyncMusicSession
 from fastapi import WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
 from models.lyria_config import LyriaConfig
-from service.realtime_eval.realtime_eval_service import RealtimeEvalService
 from shared.commands import Commands
 from shared.logging import get_logger
 import json
