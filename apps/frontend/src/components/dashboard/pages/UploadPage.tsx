@@ -31,17 +31,14 @@ export function UploadPage() {
 
       // Call REST API endpoint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('prompt', prompt);
+
       const response = await fetch(`${apiUrl}/api/context`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          prompt: prompt,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
