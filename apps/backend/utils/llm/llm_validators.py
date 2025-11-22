@@ -203,44 +203,53 @@ class LLMValidators:
                 continue
 
         return filtered_transcript
-    
+
     @staticmethod
     def validate_master_plan_response(content: str) -> MasterPlan:
         try:
             logger.info("Parsing master plan response from LLM.")
             data = json.loads(content)
-            
+
             if "global_context" not in data:
                 raise ValueError("Missing 'global_context' in master plan response")
-            
+
             if "musical_blocks" not in data:
                 raise ValueError("Missing 'musical_blocks' in master plan response")
-            
+
             global_context = data["global_context"]
             if not isinstance(global_context, str) or not global_context.strip():
                 raise ValueError("global_context must be a non-empty string")
-            
+
             music_blocks_data = data["musical_blocks"]
             if not isinstance(music_blocks_data, list):
                 raise ValueError("musical_blocks must be a list")
-            
+
             music_blocks = []
             for i, block_data in enumerate(music_blocks_data):
                 if not isinstance(block_data, dict):
                     raise ValueError(f"Music block {i} must be a dictionary")
-                
-                required_block_fields = ["time_range", "musical_direction", "transition", "lyria_config"]
+
+                required_block_fields = [
+                    "time_range",
+                    "musical_direction",
+                    "transition",
+                    "lyria_config",
+                ]
                 for field in required_block_fields:
                     if field not in block_data:
-                        raise ValueError(f"Music block {i} missing required field: {field}")
-                
+                        raise ValueError(
+                            f"Music block {i} missing required field: {field}"
+                        )
+
                 time_range = block_data["time_range"]
                 if not isinstance(time_range, dict):
                     raise ValueError(f"Music block {i} time_range must be a dictionary")
-                
+
                 if "start" not in time_range or "end" not in time_range:
-                    raise ValueError(f"Music block {i} time_range must have 'start' and 'end' fields")
-                
+                    raise ValueError(
+                        f"Music block {i} time_range must have 'start' and 'end' fields"
+                    )
+
                 try:
                     start = float(time_range["start"])
                     end = float(time_range["end"])
@@ -248,39 +257,47 @@ class LLMValidators:
                     time_range = {"start": start, "end": end}
                 except (ValueError, TypeError) as e:
                     raise ValueError(f"Music block {i} has invalid time_range: {e}")
-                
+
                 musical_direction = block_data["musical_direction"]
-                if not isinstance(musical_direction, str) or not musical_direction.strip():
-                    raise ValueError(f"Music block {i} musical_direction must be a non-empty string")
-                
+                if (
+                    not isinstance(musical_direction, str)
+                    or not musical_direction.strip()
+                ):
+                    raise ValueError(
+                        f"Music block {i} musical_direction must be a non-empty string"
+                    )
+
                 transition = block_data["transition"]
                 if not isinstance(transition, str) or not transition.strip():
-                    raise ValueError(f"Music block {i} transition must be a non-empty string")
-                
+                    raise ValueError(
+                        f"Music block {i} transition must be a non-empty string"
+                    )
+
                 lyria_config_data = block_data["lyria_config"]
                 if not isinstance(lyria_config_data, dict):
-                    raise ValueError(f"Music block {i} lyria_config must be a dictionary")
-                
+                    raise ValueError(
+                        f"Music block {i} lyria_config must be a dictionary"
+                    )
+
                 lyria_config = LLMValidators.create_lyria_config(lyria_config_data)
-                
+
                 from models.llm_response import MusicBlocks
+
                 music_block = MusicBlocks(
                     time_range=time_range,
                     musical_direction=musical_direction,
                     transition=transition,
-                    lyria_config=lyria_config
+                    lyria_config=lyria_config,
                 )
                 music_blocks.append(music_block)
-            
+
             return MasterPlan(
-                global_context=global_context,
-                musical_blocks=music_blocks
+                global_context=global_context, musical_blocks=music_blocks
             )
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in master plan response: {e}")
             raise ValueError(f"Invalid JSON format in master plan response: {e}")
         except Exception as e:
             logger.error(f"Error validating master plan response: {e}")
             raise ValueError(f"Error parsing master plan response: {e}")
-

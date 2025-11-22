@@ -1,5 +1,7 @@
+import os
 import json
 import uvicorn
+from contextlib import asynccontextmanager
 from typing import Dict, Any
 from fastapi import (
     FastAPI,
@@ -10,22 +12,46 @@ from fastapi import (
     File,
     status,
 )
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from google.genai import types
-from models.llm_response import LLMResponse
 from service.global_eval.global_eval_service import GlobalEvalService
 from service.lyria.lyria_service import LyriaService
-from models.lyria_config import LyriaConfig
-from shared.commands import Commands
 from shared.logging import get_logger
+from service.redis_service import RedisService
 
 logger = get_logger(__name__)
+load_dotenv()
 
-app = FastAPI(title="Timbre Backend")
+redis_service = RedisService(
+    redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+    session_ttl=int(os.getenv("REDIS_SESSION_TTL", "3600")),
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        await redis_service.connect()
+        logger.info("Application startup completed - Redis connected")
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis on startup: {e}")
+
+    yield
+
+    # Shutdown
+    try:
+        await redis_service.disconnect()
+        logger.info("Application shutdown completed - Redis disconnected")
+    except Exception as e:
+        logger.error(f"Error during Redis cleanup on shutdown: {e}")
+
+
+app = FastAPI(title="Timbre Backend", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,11 +79,12 @@ async def get_context(
             detail="Only MP4 video files are supported",
         )
 
-    if file.size and file.size > 50 * 1024 * 1024:
+    max_file_size = int(os.getenv("MAX_FILE_SIZE", str(50 * 1024 * 1024)))
+    if file.size and file.size > max_file_size:
         logger.error(f"File size too large: {file.size} bytes")
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Video file size must be less than 50MB",
+            detail=f"Video file size must be less than {max_file_size // (1024 * 1024)}MB",
         )
 
     try:
@@ -85,8 +112,23 @@ async def get_context(
                 f"Successfully extracted context for video file: {file.filename}"
             )
 
-            #TODO: Push to redis and send session key back
-            return config
+            try:
+                session_id = await redis_service.store_session(config)
+                logger.info(f"Session {session_id} created for video: {file.filename}")
+                return {
+                    "session_id": session_id,
+                    "message": "Video analysis completed successfully",
+                    "expires_in": redis_service.session_ttl,
+                }
+            except Exception as redis_error:
+                logger.error(f"Failed to store session in Redis: {redis_error}")
+                logger.warning("Falling back to returning configuration directly")
+                return {
+                    "session_id": None,
+                    "config": config,
+                    "message": "Video analysis completed, but session storage failed",
+                    "warning": "Session not stored - using direct response",
+                }
 
         except Exception as service_error:
             logger.error(f"Global evaluation service error: {service_error}")
@@ -120,12 +162,30 @@ async def music_websocket_endpoint(websocket: WebSocket):
             return
 
         try:
-            #TODO: Fetch from redis using session_id
-            llm_response = None
-        except ValueError as e:
+            session_id = data["session_id"]
+            llm_response = await redis_service.get_session(session_id)
+
+            if llm_response is None:
+                logger.error(f"Session {session_id} not found or expired")
+                await websocket.close(code=1003, reason="Session not found or expired")
+                return
+
+            await redis_service.extend_session_ttl(session_id)
+            logger.info(f"Retrieved and extended session {session_id}")
+
+        except Exception as e:
             logger.error("Could not fetch session values from redis: %s", e)
-            await websocket.close(code=1003, reason="Invalid parameter format")
+            await websocket.close(code=1003, reason="Failed to retrieve session data")
             return
+
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "session_data",
+                    "data": redis_service._llm_response_to_dict(llm_response),
+                }
+            )
+        )
 
         lyria_service = LyriaService(
             user_websocket=websocket, llm_response=llm_response
@@ -152,4 +212,9 @@ async def music_websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "8000")),
+        reload=os.getenv("RELOAD", "false").lower() == "true",
+    )

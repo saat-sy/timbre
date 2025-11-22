@@ -16,9 +16,7 @@ logger = get_logger(__name__)
 
 
 class LyriaService:
-    def __init__(
-        self, user_websocket: WebSocket, llm_response: LLMResponse
-    ) -> None:
+    def __init__(self, user_websocket: WebSocket, llm_response: LLMResponse) -> None:
         logger.info("Initializing LyriaService")
         self.user_websocket = user_websocket
         self.model = "models/lyria-realtime-exp"
@@ -34,7 +32,9 @@ class LyriaService:
         self.llm_response = llm_response
         self.elapsed_music_time = 0.0
 
-        self.current_config = self.llm_response.master_plan.musical_blocks[0].lyria_config
+        self.current_config = self.llm_response.master_plan.musical_blocks[
+            0
+        ].lyria_config
 
         logger.info("LyriaService initialized successfully")
 
@@ -75,14 +75,19 @@ class LyriaService:
     async def _check_for_music_update(self, session: AsyncMusicSession) -> None:
         for i, segment in enumerate(self.llm_response.master_plan.musical_blocks):
             end = segment.time_range.get("end", float("inf"))
-            if self.elapsed_music_time <= end and float(end) - self.elapsed_music_time <= 3:
+            if (
+                self.elapsed_music_time <= end
+                and float(end) - self.elapsed_music_time <= 3
+            ):
                 if i + 1 < len(self.llm_response.master_plan.musical_blocks):
                     logger.info(
                         "Music update needed. Elapsed time: %.2f, Segment end time: %.2f",
                         self.elapsed_music_time,
                         end,
                     )
-                    new_config = self.llm_response.master_plan.musical_blocks[i + 1].lyria_config
+                    new_config = self.llm_response.master_plan.musical_blocks[
+                        i + 1
+                    ].lyria_config
                     update_config = False
                     if self.current_config.bpm != new_config.bpm:
                         self.config.bpm = new_config.bpm
@@ -91,17 +96,11 @@ class LyriaService:
                     if self.current_config.scale != new_config.scale:
                         self.config.scale = new_config.get_lyria_scale()
                         update_config = True
-                        logger.info(
-                            "Updated Scale to %s", self.config.scale.name
-                        )
+                        logger.info("Updated Scale to %s", self.config.scale.name)
                     if update_config:
-                        await session.set_music_generation_config(
-                            config=self.config
-                        )
+                        await session.set_music_generation_config(config=self.config)
                         await session.reset_context()
-                        logger.info(
-                            "Injected new configuration and reset context"
-                        )
+                        logger.info("Injected new configuration and reset context")
 
                     prompt_text = new_config.prompt
                     weight = new_config.weight
@@ -115,10 +114,10 @@ class LyriaService:
                         ]
                     )
 
-                    self.current_config = new_config 
+                    self.current_config = new_config
                 else:
                     return
-    
+
     async def _proxy_audio_to_client(self, session: AsyncMusicSession) -> None:
         logger.info("Audio proxy loop started. Streaming audio to client.")
         try:
@@ -136,8 +135,11 @@ class LyriaService:
                             logger.info("Sent playing message to client")
                             first_chunk_sent = True
                         await self.user_websocket.send_bytes(audio_data)
-                        self.elapsed_music_time += 2 # 2 seconds are sent in each chunk
-                        logger.info("Sent audio chunk to client, total elapsed music time: %.2f seconds", self.elapsed_music_time)
+                        self.elapsed_music_time += 2  # 2 seconds are sent in each chunk
+                        logger.info(
+                            "Sent audio chunk to client, total elapsed music time: %.2f seconds",
+                            self.elapsed_music_time,
+                        )
                         await self._check_for_music_update(session)
                     else:
                         logger.info("Received audio chunk with no data.")
@@ -165,7 +167,8 @@ class LyriaService:
                 await session.set_weighted_prompts(
                     prompts=[
                         types.WeightedPrompt(
-                            text=self.current_config.prompt, weight=self.current_config.weight
+                            text=self.current_config.prompt,
+                            weight=self.current_config.weight,
                         )
                     ]
                 )
