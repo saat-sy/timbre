@@ -11,13 +11,11 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from google.genai import types
 from models.llm_response import LLMResponse
 from service.global_eval.global_eval_service import GlobalEvalService
 from service.lyria.lyria_service import LyriaService
 from models.lyria_config import LyriaConfig
-from service.realtime_eval.realtime_eval_service import RealtimeEvalService
 from shared.commands import Commands
 from shared.logging import get_logger
 
@@ -87,10 +85,8 @@ async def get_context(
                 f"Successfully extracted context for video file: {file.filename}"
             )
 
-            response_dict = config.dict()
-            response_dict["temp_video_path"] = global_context_service.temp_video_path
-
-            return config.dict()
+            #TODO: Push to redis and send session key back
+            return config
 
         except Exception as service_error:
             logger.error(f"Global evaluation service error: {service_error}")
@@ -118,84 +114,23 @@ async def music_websocket_endpoint(websocket: WebSocket):
         message = await websocket.receive_text()
         data = json.loads(message)
 
-        required_fields = [
-            Commands.PROMPT,
-            Commands.BPM,
-            Commands.SCALE,
-            Commands.WEIGHT,
-            Commands.CONTEXT,
-            Commands.TRANSCRIPTION,
-            "temp_video_path",
-        ]
-        missing_fields = [field for field in required_fields if not data.get(field)]
-
-        if missing_fields:
-            logger.error("Missing required parameters: %s", ", ".join(missing_fields))
-            await websocket.close(
-                code=1003, reason=f"Missing parameters: {', '.join(missing_fields)}"
-            )
+        if "session_id" not in data:
+            logger.error("Missing session_id in WebSocket message")
+            await websocket.close(code=1003, reason="session_id is required")
             return
 
         try:
-            prompt = data.get(Commands.PROMPT)
-            bpm = int(data.get(Commands.BPM))
-            scale_str = data.get(Commands.SCALE)
-            weight = float(data.get(Commands.WEIGHT))
-            context = data.get(Commands.CONTEXT)
-            transcription = data.get(Commands.TRANSCRIPTION)
-            temp_video_path = data.get("temp_video_path")
-
-            if bpm < 30 or bpm > 300:
-                logger.error("BPM value %d is outside valid range (30-300)", bpm)
-                await websocket.close(
-                    code=1003, reason="BPM must be between 30 and 300"
-                )
-                return
-
-            if weight < 0.0 or weight > 10.0:
-                logger.error(
-                    "Weight value %.2f is outside valid range (0.0-10.0)", weight
-                )
-                await websocket.close(
-                    code=1003, reason="Weight must be between 0.0 and 10.0"
-                )
-                return
-
-            scale_enum = None
-            for scale_member in types.Scale:
-                if scale_member.name.lower() == scale_str.lower():
-                    scale_enum = scale_member
-                    break
-
-            if scale_enum is None:
-                logger.error("Invalid scale value: %s", scale_str)
-                await websocket.close(code=1003, reason=f"Invalid scale: {scale_str}")
-                return
-
-            lyria_config = LyriaConfig(
-                prompt=prompt, bpm=bpm, scale=scale_enum, weight=weight
-            )
-
-            global_config = LLMResponse(
-                lyria_config=lyria_config,
-                context=context,
-                transcription=str(transcription),
-            )
+            #TODO: Fetch from redis using session_id
+            llm_response = None
         except ValueError as e:
-            logger.error("Invalid data type in parameters: %s", e)
+            logger.error("Could not fetch session values from redis: %s", e)
             await websocket.close(code=1003, reason="Invalid parameter format")
             return
 
-        realtime_eval_service = RealtimeEvalService(
-            transcription=transcription,
-            global_config=global_config,
-            temp_video_path=temp_video_path,
-        )
-
         lyria_service = LyriaService(
-            user_websocket=websocket, realtime_eval_service=realtime_eval_service
+            user_websocket=websocket, llm_response=llm_response
         )
-        await lyria_service.start_session(lyria_config=lyria_config)
+        await lyria_service.start_session()
 
         logger.info("Lyria session started successfully")
     except WebSocketDisconnect:
