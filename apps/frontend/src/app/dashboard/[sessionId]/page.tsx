@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { withConfirmedAuth } from '../../../lib/auth';
 import { useEffect, useState } from 'react';
 import { DashboardLayout, CustomVideoPlayer } from '../../../components/dashboard';
+import { TopContextBar, MusicalBlockBar } from '../../../components/dashboard/video/MusicalContextDisplay';
 
 function VideoPlayerContent() {
   const params = useParams();
@@ -12,6 +13,44 @@ function VideoPlayerContent() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [musicalContext, setMusicalContext] = useState<any | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  // Extract current mood for dynamic background
+  const currentMood = musicalContext?.scene_analysis?.find(
+    (scene: any) => currentTime >= scene.start_time && currentTime < scene.end_time
+  )?.mood?.toLowerCase();
+
+  const getBackgroundGradient = (mood: string | undefined) => {
+    switch (mood) {
+      case 'tense':
+        return 'from-gray-900 via-blue-900/20 to-black';
+      case 'ominous':
+        return 'from-gray-900 via-purple-900/20 to-black';
+      case 'anticipatory':
+        return 'from-gray-900 via-yellow-900/20 to-black';
+      case 'confrontational':
+        return 'from-gray-900 via-red-900/20 to-black';
+      case 'chaotic':
+        return 'from-gray-900 via-orange-900/20 to-black';
+      case 'cautious':
+        return 'from-gray-900 via-indigo-900/20 to-black';
+      case 'anxious':
+        return 'from-gray-900 via-teal-900/20 to-black';
+      case 'serious':
+        return 'from-gray-900 via-slate-900/20 to-black';
+      case 'intense':
+        return 'from-gray-900 via-red-950/30 to-black';
+      case 'sarcastic':
+        return 'from-gray-900 via-pink-900/20 to-black';
+      case 'surprised':
+        return 'from-gray-900 via-cyan-900/20 to-black';
+      case 'resentful':
+        return 'from-gray-900 via-rose-900/20 to-black';
+      default:
+        return 'from-gray-900 via-gray-900 to-black';
+    }
+  };
 
   useEffect(() => {
     // Retrieve the uploaded video from sessionStorage
@@ -84,60 +123,45 @@ function VideoPlayerContent() {
   }
 
   return (
-    <div className="h-full p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Video Player</h1>
-          <p className="text-gray-400">Session: {sessionId}</p>
+    <div className={`h-screen w-full flex flex-col overflow-hidden transition-colors duration-1000 bg-gradient-to-br ${getBackgroundGradient(currentMood)}`}>
+
+      {/* TOP: Global & Scene Context */}
+      <div className="shrink-0 z-20 relative">
+        <TopContextBar context={musicalContext} currentTime={currentTime} />
+      </div>
+
+      {/* MIDDLE: Video Player */}
+      <div className="flex-grow flex flex-col relative bg-black/20">
+        {/* Minimal Header Overlay */}
+        <div className="absolute top-4 left-6 z-20 flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-white/50" />
+          <span className="text-white/50 text-xs font-mono tracking-widest uppercase">Timbre Studio</span>
+        </div>
+        <div className="absolute top-4 right-6 z-20 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[10px] font-mono tracking-wider">
+          SESSION: {sessionId.substring(0, 8)}...
         </div>
 
-        {/* Video Player */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden animate-slideUp">
-          <CustomVideoPlayer
-            src={videoUrl}
-            initialPaused={true}
-            onTimeUpdate={(time: number) => console.log('Time update:', time)}
-            onPlay={() => console.log('Command: PLAY')}
-            onPause={() => console.log('Command: PAUSE')}
-            sessionId={sessionId}
-          />
-        </div>
-
-        {/* Video Info */}
-        <div
-          className="bg-white/5 border border-white/10 rounded-2xl p-6 animate-slideUp"
-          style={{ animationDelay: '100ms' }}
-        >
-          <h2 className="text-white font-semibold mb-2">Video Details</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Session ID:</span>
-              <span className="text-white font-mono">{sessionId}</span>
-            </div>
+        {/* Video Container */}
+        <div className="flex-grow flex items-center justify-center p-6 md:p-10">
+          <div className="w-full max-w-6xl aspect-video bg-black shadow-2xl rounded-2xl overflow-hidden border border-white/10 ring-1 ring-white/5 relative z-10">
+            <CustomVideoPlayer
+              src={videoUrl}
+              initialPaused={true}
+              onTimeUpdate={(time: number) => setCurrentTime(time)}
+              onPlay={() => console.log('Command: PLAY')}
+              onPause={() => console.log('Command: PAUSE')}
+              onContextUpdate={setMusicalContext}
+              sessionId={sessionId}
+            />
           </div>
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
+      {/* BOTTOM: Musical Block */}
+      <div className="shrink-0 z-20 relative">
+        <MusicalBlockBar context={musicalContext} currentTime={currentTime} />
+      </div>
 
-
-
-        .animate-slideUp {
-          animation: slideUp 0.4s ease-out;
-          animation-fill-mode: both;
-        }
-      `}</style>
     </div>
   );
 }

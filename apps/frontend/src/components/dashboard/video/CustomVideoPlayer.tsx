@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 
 import { useAudioStream } from './useAudioStream';
-import { MusicalContextDisplay } from './MusicalContextDisplay';
+import { MusicalContext } from './MusicalContextDisplay';
 
 interface CustomVideoPlayerProps {
     src: string;
@@ -11,6 +11,7 @@ interface CustomVideoPlayerProps {
     onTimeUpdate?: (currentTime: number) => void;
     onPlay?: () => void;
     onPause?: () => void;
+    onContextUpdate?: (context: MusicalContext | null) => void;
     sessionId: string;
 }
 
@@ -20,6 +21,7 @@ export function CustomVideoPlayer({
     onTimeUpdate,
     onPlay,
     onPause,
+    onContextUpdate,
     sessionId,
 }: CustomVideoPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -218,6 +220,10 @@ export function CustomVideoPlayer({
     const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
     const bufferPercentage = duration > 0 ? (bufferedDuration / duration) * 100 : 0;
 
+    useEffect(() => {
+        onContextUpdate?.(musicalContext);
+    }, [musicalContext, onContextUpdate]);
+
     return (
         <div className="relative group bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10">
             <video
@@ -302,13 +308,6 @@ export function CustomVideoPlayer({
                     </div>
                 </div>
             )}
-
-            {/* Musical Context Display Overlay */}
-            <div className="absolute top-4 right-4 z-20 w-80 pointer-events-none">
-                <div className="pointer-events-auto">
-                    <MusicalContextDisplay context={musicalContext} currentTime={currentTime} />
-                </div>
-            </div>
 
             {/* Buffering Spinner Overlay (when playing but buffering) */}
             {isPlaying && isBuffering && (

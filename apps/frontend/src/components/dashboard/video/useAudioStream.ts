@@ -170,10 +170,20 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
                 }
 
                 try {
-                    const data = JSON.parse(event.data);
-                    if (data.global_context && data.musical_blocks) {
-                        console.log('Received musical context:', data);
-                        setMusicalContext(data);
+                    const parsedData = JSON.parse(event.data);
+                    if (parsedData.type === 'session_data' && parsedData.data) {
+                        console.log('Received session data:', parsedData.data);
+                        setMusicalContext(parsedData as MusicalContext);
+                    } else if (parsedData.global_context && parsedData.musical_blocks) {
+                        // Fallback for old format if any
+                        console.log('Received legacy musical context:', parsedData);
+                        setMusicalContext({
+                            type: 'session_data',
+                            data: {
+                                master_plan: parsedData,
+                                scene_analysis: []
+                            }
+                        });
                     }
                 } catch (e) {
                     // Not JSON or not the message we expect
