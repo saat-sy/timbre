@@ -123,42 +123,32 @@ function VideoPlayerContent() {
   }
 
   return (
-    <div className={`h-screen w-full flex flex-col overflow-hidden transition-colors duration-1000 bg-gradient-to-br ${getBackgroundGradient(currentMood)}`}>
+    <div className={`h-screen w-full flex flex-col gap-2 p-2 overflow-hidden transition-colors duration-1000 bg-gradient-to-br ${getBackgroundGradient(currentMood)}`}>
 
-      {/* TOP: Global & Scene Context */}
+      {/* TOP: Global Context Only */}
       <div className="shrink-0 z-20 relative">
         <TopContextBar context={musicalContext} currentTime={currentTime} />
       </div>
 
       {/* MIDDLE: Video Player */}
-      <div className="flex-grow flex flex-col relative bg-black/20">
-        {/* Minimal Header Overlay */}
-        <div className="absolute top-4 left-6 z-20 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-white/50" />
-          <span className="text-white/50 text-xs font-mono tracking-widest uppercase">Timbre Studio</span>
-        </div>
-        <div className="absolute top-4 right-6 z-20 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[10px] font-mono tracking-wider">
-          SESSION: {sessionId.substring(0, 8)}...
-        </div>
+      <div className="flex-1 min-h-0 flex items-center justify-center relative bg-black/60 backdrop-blur-xl rounded-xl overflow-hidden border border-white/10 shadow-lg">
 
         {/* Video Container */}
-        <div className="flex-grow flex items-center justify-center p-6 md:p-10">
-          <div className="w-full max-w-6xl aspect-video bg-black shadow-2xl rounded-2xl overflow-hidden border border-white/10 ring-1 ring-white/5 relative z-10">
-            <CustomVideoPlayer
-              src={videoUrl}
-              initialPaused={true}
-              onTimeUpdate={(time: number) => setCurrentTime(time)}
-              onPlay={() => console.log('Command: PLAY')}
-              onPause={() => console.log('Command: PAUSE')}
-              onContextUpdate={setMusicalContext}
-              sessionId={sessionId}
-            />
-          </div>
+        <div className="aspect-video w-full max-h-full max-w-5xl bg-black shadow-2xl rounded-xl overflow-hidden border border-white/10 ring-1 ring-white/5 relative z-10">
+          <CustomVideoPlayer
+            src={videoUrl}
+            initialPaused={true}
+            onTimeUpdate={(time: number) => setCurrentTime(time)}
+            onPlay={() => console.log('Command: PLAY')}
+            onPause={() => console.log('Command: PAUSE')}
+            onContextUpdate={setMusicalContext}
+            sessionId={sessionId}
+          />
         </div>
       </div>
 
-      {/* BOTTOM: Musical Block */}
-      <div className="shrink-0 z-20 relative">
+      {/* BOTTOM: Musical Block Card (Squared Up) */}
+      <div className="shrink-0 z-20 relative px-2">
         <MusicalBlockBar context={musicalContext} currentTime={currentTime} />
       </div>
 

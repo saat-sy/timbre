@@ -225,7 +225,7 @@ export function CustomVideoPlayer({
     }, [musicalContext, onContextUpdate]);
 
     return (
-        <div className="relative group bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+        <div className="relative group rounded-2xl overflow-hidden border border-white/10">
             <video
                 ref={videoRef}
                 src={src}
