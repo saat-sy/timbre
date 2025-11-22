@@ -100,6 +100,7 @@ function VideoPlayerContent() {
             onTimeUpdate={(time: number) => console.log('Time update:', time)}
             onPlay={() => console.log('Command: PLAY')}
             onPause={() => console.log('Command: PAUSE')}
+            sessionId={sessionId}
           />
         </div>
 

@@ -10,6 +10,7 @@ interface CustomVideoPlayerProps {
     onTimeUpdate?: (currentTime: number) => void;
     onPlay?: () => void;
     onPause?: () => void;
+    sessionId: string;
 }
 
 export function CustomVideoPlayer({
@@ -18,6 +19,7 @@ export function CustomVideoPlayer({
     onTimeUpdate,
     onPlay,
     onPause,
+    sessionId,
 }: CustomVideoPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(!initialPaused);
@@ -33,6 +35,7 @@ export function CustomVideoPlayer({
         videoDuration: duration,
         onStop: handleAudioStop,
         initialPaused: initialPaused,
+        sessionId,
     });
 
     const initialPauseApplied = useRef(false);

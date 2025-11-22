@@ -5,6 +5,7 @@ interface UseAudioStreamProps {
     videoDuration: number;
     onStop?: () => void;
     initialPaused?: boolean;
+    sessionId: string;
 }
 
 interface AudioChunk {
@@ -13,7 +14,7 @@ interface AudioChunk {
     duration: number;
 }
 
-export function useAudioStream({ videoDuration, onStop, initialPaused = false }: UseAudioStreamProps) {
+export function useAudioStream({ videoDuration, onStop, initialPaused = false, sessionId }: UseAudioStreamProps) {
     const audioContextRef = useRef<AudioContext | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
 
@@ -147,24 +148,12 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false }:
         wsRef.current = ws;
         ws.binaryType = 'arraybuffer';
 
-        ws.onopen = async () => {
+        ws.onopen = () => {
             console.log('WebSocket connected');
-
-            try {
-                // Fetch session ID
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-                const response = await fetch(`${apiUrl}/api/context`);
-                const data = await response.json();
-                const sessionId = data.session_id;
-
-                if (!sessionId) {
-                    console.error('No session ID received');
-                    return;
-                }
-
+            if (sessionId) {
                 ws.send(JSON.stringify({ session_id: sessionId }));
-            } catch (error) {
-                console.error('Error fetching session ID:', error);
+            } else {
+                console.error('No session ID provided to useAudioStream');
                 ws.close();
             }
         };
