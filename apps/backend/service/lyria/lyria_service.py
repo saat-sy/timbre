@@ -5,6 +5,7 @@ from google.genai import types
 from google.genai.live_music import AsyncMusicSession
 from fastapi import WebSocket, WebSocketDisconnect
 from dotenv import load_dotenv
+from models.llm_response import LLMResponse
 from models.lyria_config import LyriaConfig
 from shared.commands import Commands
 from shared.logging import get_logger
@@ -16,7 +17,7 @@ logger = get_logger(__name__)
 
 class LyriaService:
     def __init__(
-        self, user_websocket: WebSocket, realtime_eval_service: RealtimeEvalService
+        self, user_websocket: WebSocket, llm_response: LLMResponse
     ) -> None:
         logger.info("Initializing LyriaService")
         self.user_websocket = user_websocket
@@ -30,8 +31,10 @@ class LyriaService:
         )
         self.config = types.LiveMusicGenerationConfig()
 
-        self.realtime_service = realtime_eval_service
-        self.current_config = self.realtime_service.get_latest_config()
+        self.llm_response = llm_response
+        self.elapsed_music_time = 0.0
+
+        self.current_config = self.llm_response.master_plan.musical_blocks[0].lyria_config
 
         logger.info("LyriaService initialized successfully")
 
@@ -59,57 +62,6 @@ class LyriaService:
                             await session.stop()
                             logger.info("Sent STOP command to Lyria session")
                             break
-                        elif command[Commands.COMMAND] == Commands.EVALUATE:
-                            logger.info("Starting evaluation process")
-                            realtime_llm_response = await self.realtime_service.evaluate_segment(
-                                start_time=command.get(Commands.START_TIME, 0.0),
-                                end_time=command.get(Commands.END_TIME, float("inf")),
-                            )
-                            await self.user_websocket.send_text(json.dumps(realtime_llm_response.dict()))
-                            logger.info("Evaluation process completed")
-                        elif command[Commands.COMMAND] == Commands.INJECT:
-                            update_config = False
-                            new_config = self.realtime_service.get_latest_config()
-                            if self.current_config.bpm != new_config.bpm:
-                                logger.info(
-                                    "Injecting updated BPM: %d",
-                                    self.realtime_service.get_latest_config().bpm,
-                                )
-                                self.config.bpm = new_config.bpm
-                                update_config = True
-                                logger.info("Updated BPM to %d", self.config.bpm)
-                            if self.current_config.scale != new_config.scale:
-                                logger.info(
-                                    "Injecting updated Scale: %s", new_config.scale
-                                )
-                                self.config.scale = new_config.get_lyria_scale()
-                                update_config = True
-                                logger.info(
-                                    "Updated Scale to %s", self.config.scale.name
-                                )
-                            if update_config:
-                                await session.set_music_generation_config(
-                                    config=self.config
-                                )
-                                await session.reset_context()
-                                logger.info(
-                                    "Injected new configuration and reset context"
-                                )
-
-                            prompt_text = new_config.prompt
-                            weight = new_config.weight
-
-                            await session.set_weighted_prompts(
-                                prompts=[
-                                    types.WeightedPrompt(
-                                        text=prompt_text,
-                                        weight=weight,
-                                    )
-                                ]
-                            )
-
-                            self.current_config = new_config
-                            logger.info("Inject command completed")
                 except ValueError as e:
                     logger.error("Invalid value in command: %s", e)
                     continue
@@ -120,6 +72,53 @@ class LyriaService:
         finally:
             logger.info("Command loop has fully ended.")
 
+    async def _check_for_music_update(self, session: AsyncMusicSession) -> None:
+        for i, segment in enumerate(self.llm_response.master_plan.musical_blocks):
+            end = segment.time_range.get("end", float("inf"))
+            if self.elapsed_music_time <= end and float(end) - self.elapsed_music_time <= 3:
+                if i + 1 < len(self.llm_response.master_plan.musical_blocks):
+                    logger.info(
+                        "Music update needed. Elapsed time: %.2f, Segment end time: %.2f",
+                        self.elapsed_music_time,
+                        end,
+                    )
+                    new_config = self.llm_response.master_plan.musical_blocks[i + 1].lyria_config
+                    update_config = False
+                    if self.current_config.bpm != new_config.bpm:
+                        self.config.bpm = new_config.bpm
+                        update_config = True
+                        logger.info("Updated BPM to %d", self.config.bpm)
+                    if self.current_config.scale != new_config.scale:
+                        self.config.scale = new_config.get_lyria_scale()
+                        update_config = True
+                        logger.info(
+                            "Updated Scale to %s", self.config.scale.name
+                        )
+                    if update_config:
+                        await session.set_music_generation_config(
+                            config=self.config
+                        )
+                        await session.reset_context()
+                        logger.info(
+                            "Injected new configuration and reset context"
+                        )
+
+                    prompt_text = new_config.prompt
+                    weight = new_config.weight
+
+                    await session.set_weighted_prompts(
+                        prompts=[
+                            types.WeightedPrompt(
+                                text=prompt_text,
+                                weight=weight,
+                            )
+                        ]
+                    )
+
+                    self.current_config = new_config 
+                else:
+                    return
+    
     async def _proxy_audio_to_client(self, session: AsyncMusicSession) -> None:
         logger.info("Audio proxy loop started. Streaming audio to client.")
         try:
@@ -137,6 +136,9 @@ class LyriaService:
                             logger.info("Sent playing message to client")
                             first_chunk_sent = True
                         await self.user_websocket.send_bytes(audio_data)
+                        self.elapsed_music_time += 2 # 2 seconds are sent in each chunk
+                        logger.info("Sent audio chunk to client, total elapsed music time: %.2f seconds", self.elapsed_music_time)
+                        await self._check_for_music_update(session)
                     else:
                         logger.info("Received audio chunk with no data.")
                 elif message.filtered_prompt:
@@ -151,11 +153,11 @@ class LyriaService:
         finally:
             logger.info("Audio loop has fully ended.")
 
-    async def start_session(self, lyria_config: LyriaConfig) -> None:
-        logger.info("Starting Lyria session with config: %s", lyria_config)
+    async def start_session(self) -> None:
+        logger.info("Starting Lyria session with config: %s", self.current_config)
         try:
-            self.config.bpm = lyria_config.bpm
-            self.config.scale = lyria_config.get_lyria_scale()
+            self.config.bpm = self.current_config.bpm
+            self.config.scale = self.current_config.get_lyria_scale()
 
             session: AsyncMusicSession
             async with self.client.aio.live.music.connect(model=self.model) as session:
@@ -163,7 +165,7 @@ class LyriaService:
                 await session.set_weighted_prompts(
                     prompts=[
                         types.WeightedPrompt(
-                            text=lyria_config.prompt, weight=lyria_config.weight
+                            text=self.current_config.prompt, weight=self.current_config.weight
                         )
                     ]
                 )

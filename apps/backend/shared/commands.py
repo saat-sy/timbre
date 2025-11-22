@@ -3,8 +3,6 @@ class Commands:
     PLAYING = "PLAYING"
     PAUSE = "PAUSE"
     STOP = "STOP"
-    EVALUATE = "EVALUATE"
-    INJECT = "INJECT"
     COMMAND = "command"
     BPM = "bpm"
     SCALE = "scale"
