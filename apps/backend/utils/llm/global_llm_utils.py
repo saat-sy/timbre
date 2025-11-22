@@ -135,7 +135,7 @@ class LLMUtils:
                         logger.error(f"Chunk processing generated an exception: {exc}")
 
             logger.info("Generating master plan based on scene analysis.")
-            
+
             global_prompt = Prompts.get_global_summary_plan_prompt(
                 scenes=scene_analysis, transcription=transcript
             )
@@ -167,18 +167,26 @@ class LLMUtils:
                         response.choices[0].message.content
                     )
                     break
-                    
+
                 except Exception as parse_error:
-                    logger.warning(f"Master plan parse attempt {attempt + 1} failed: {parse_error}")
-                    
+                    logger.warning(
+                        f"Master plan parse attempt {attempt + 1} failed: {parse_error}"
+                    )
+
                     if attempt < self.MAX_RETRIES - 1:
-                        logger.info(f"Retrying master plan generation due to parsing failure (attempt {attempt + 2}/{self.MAX_RETRIES})")
+                        logger.info(
+                            f"Retrying master plan generation due to parsing failure (attempt {attempt + 2}/{self.MAX_RETRIES})"
+                        )
                     else:
-                        logger.error(f"All master plan parsing attempts failed. Last error: {parse_error}")
+                        logger.error(
+                            f"All master plan parsing attempts failed. Last error: {parse_error}"
+                        )
                         raise parse_error
-            
+
             if master_plan is None:
-                raise ValueError("Failed to generate valid master plan after all retries")
+                raise ValueError(
+                    "Failed to generate valid master plan after all retries"
+                )
 
             return LLMResponse(
                 scene_analysis=scene_analysis,
