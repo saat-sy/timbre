@@ -6,7 +6,7 @@ from groq.types.chat import ChatCompletion
 from typing import Dict, List
 from models.frame import Frame
 from models.lyria_config import LyriaConfig
-from models.llm_response import LLMResponse, MasterPlan
+from models.llm_response import LLMResponse, MasterPlan, MusicBlocks
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -233,6 +233,7 @@ class LLMValidators:
                     "time_range",
                     "musical_direction",
                     "transition",
+                    "gain",
                     "lyria_config",
                 ]
                 for field in required_block_fields:
@@ -272,6 +273,10 @@ class LLMValidators:
                     raise ValueError(
                         f"Music block {i} transition must be a non-empty string"
                     )
+                
+                gain = block_data["gain"]
+                if not isinstance(gain, (int, float)):
+                    raise ValueError(f"Music block {i} gain must be a number")
 
                 lyria_config_data = block_data["lyria_config"]
                 if not isinstance(lyria_config_data, dict):
@@ -281,12 +286,11 @@ class LLMValidators:
 
                 lyria_config = LLMValidators.create_lyria_config(lyria_config_data)
 
-                from models.llm_response import MusicBlocks
-
                 music_block = MusicBlocks(
                     time_range=time_range,
                     musical_direction=musical_direction,
                     transition=transition,
+                    gain=gain,
                     lyria_config=lyria_config,
                 )
                 music_blocks.append(music_block)

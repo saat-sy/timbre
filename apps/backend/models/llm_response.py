@@ -8,6 +8,7 @@ class MusicBlocks:
     time_range: dict
     musical_direction: str
     transition: str
+    gain: float
     lyria_config: LyriaConfig
 
 

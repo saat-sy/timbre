@@ -84,6 +84,7 @@ Respond ONLY with a valid JSON object. No markdown formatting.
       }},
       "musical_direction": "Describe the instrumentation, tempo, and vibe",
       "transition": "How this block ends (e.g., 'Fade out', 'Slam cut to silence', 'Crescendo into next section')",
+      "gain": float (Volume: 0.2-0.4 subtle/ambient, 0.3-0.5 background, 0.4-0.6 action/emotional, 0.5-0.7 climax),
       "lyria_config": {{
         "prompt": "string (Mood + Genre + Instruments)",
         "bpm": integer (60-200),

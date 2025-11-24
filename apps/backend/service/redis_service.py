@@ -142,6 +142,7 @@ class RedisService:
                         "time_range": block.time_range,
                         "musical_direction": block.musical_direction,
                         "transition": block.transition,
+                        "gain": block.gain,
                         "lyria_config": {
                             "prompt": block.lyria_config.prompt,
                             "bpm": block.lyria_config.bpm,
@@ -168,6 +169,7 @@ class RedisService:
                 time_range=block_data["time_range"],
                 musical_direction=block_data["musical_direction"],
                 transition=block_data["transition"],
+                gain=block_data["gain"],
                 lyria_config=lyria_config,
             )
             musical_blocks.append(music_block)
