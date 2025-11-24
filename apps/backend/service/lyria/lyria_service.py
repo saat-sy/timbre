@@ -21,6 +21,8 @@ class LyriaService:
         self.user_websocket = user_websocket
         self.model = "models/lyria-realtime-exp"
         self.BUFFER_SECONDS = 1.0
+        self.HEARTBEAT_INTERVAL = 10.0
+        self.HEARTBEAT_TIMEOUT = 30.0
 
         if not os.getenv("GOOGLE_API_KEY"):
             raise ValueError("GOOGLE_API_KEY not found in environment variables")
@@ -31,6 +33,9 @@ class LyriaService:
 
         self.llm_response = llm_response
         self.elapsed_music_time = 0.0
+        self.last_heartbeat_time = asyncio.get_event_loop().time()
+        self.heartbeat_received = True
+        self.session_active = True
 
         self.current_config = self.llm_response.master_plan.musical_blocks[
             0
@@ -41,7 +46,7 @@ class LyriaService:
     async def _proxy_commands_to_lyria(self, session: AsyncMusicSession) -> None:
         logger.info("Command loop started. Waiting for commands from client.")
         try:
-            while True:
+            while self.session_active:
                 message = await self.user_websocket.receive_text()
                 logger.info("Received command from client: %s", message)
 
@@ -61,14 +66,21 @@ class LyriaService:
                         elif command[Commands.COMMAND] == Commands.STOP:
                             await session.stop()
                             logger.info("Sent STOP command to Lyria session")
+                            self.session_active = False
                             break
+                        elif command[Commands.COMMAND] == Commands.HEARTBEAT_ACK:
+                            self.heartbeat_received = True
+                            self.last_heartbeat_time = asyncio.get_event_loop().time()
+                            logger.debug("Received heartbeat acknowledgment from client")
                 except ValueError as e:
                     logger.error("Invalid value in command: %s", e)
                     continue
         except WebSocketDisconnect as e:
             logger.info(f"Client disconnected (command loop): {e}")
+            self.session_active = False
         except Exception as e:
             logger.error(f"UNEXPECTED command loop error: {e}", exc_info=True)
+            self.session_active = False
         finally:
             logger.info("Command loop has fully ended.")
 
@@ -118,12 +130,45 @@ class LyriaService:
                 else:
                     return
 
+    async def _heartbeat_monitor(self) -> None:
+        logger.info("Heartbeat monitor started")
+        try:
+            while self.session_active:
+                await asyncio.sleep(self.HEARTBEAT_INTERVAL)
+                
+                if not self.session_active:
+                    break
+                
+                current_time = asyncio.get_event_loop().time()
+                if not self.heartbeat_received and (current_time - self.last_heartbeat_time) > self.HEARTBEAT_TIMEOUT:
+                    logger.warning("Heartbeat timeout - client appears to be disconnected")
+                    self.session_active = False
+                    break
+                
+                try:
+                    heartbeat_message = json.dumps({Commands.COMMAND: Commands.HEARTBEAT})
+                    await self.user_websocket.send_text(heartbeat_message)
+                    self.heartbeat_received = False
+                    logger.debug("Sent heartbeat request to client")
+                except Exception as e:
+                    logger.error(f"Failed to send heartbeat: {e}")
+                    self.session_active = False
+                    break
+        except Exception as e:
+            logger.error(f"Heartbeat monitor error: {e}", exc_info=True)
+            self.session_active = False
+        finally:
+            logger.info("Heartbeat monitor ended")
+
     async def _proxy_audio_to_client(self, session: AsyncMusicSession) -> None:
         logger.info("Audio proxy loop started. Streaming audio to client.")
         try:
             chunks_count = 0
             first_chunk_sent = False
             async for message in session.receive():
+                if not self.session_active:
+                    break
+                    
                 chunks_count += 1
                 if chunks_count == 1:
                     await asyncio.sleep(self.BUFFER_SECONDS)
@@ -150,8 +195,10 @@ class LyriaService:
                 await asyncio.sleep(10**-12)
         except WebSocketDisconnect as e:
             logger.info(f"Client disconnected (audio loop): {e}")
+            self.session_active = False
         except Exception as e:
             logger.error(f"UNEXPECTED audio loop error: {e}", exc_info=True)
+            self.session_active = False
         finally:
             logger.info("Audio loop has fully ended.")
 
@@ -177,9 +224,10 @@ class LyriaService:
                 logger.info("Playing Lyria session")
                 await session.play()
 
-                logger.info("Starting send and receive tasks")
+                logger.info("Starting send, receive, and heartbeat tasks")
                 send_task = None
                 receive_task = None
+                heartbeat_task = None
                 try:
                     send_task = asyncio.create_task(
                         self._proxy_commands_to_lyria(session)
@@ -187,25 +235,34 @@ class LyriaService:
                     receive_task = asyncio.create_task(
                         self._proxy_audio_to_client(session)
                     )
+                    heartbeat_task = asyncio.create_task(
+                        self._heartbeat_monitor()
+                    )
 
                     await asyncio.gather(
-                        send_task, receive_task, return_exceptions=True
+                        send_task, receive_task, heartbeat_task, return_exceptions=True
                     )
                 except Exception as e:
                     logger.error("Error in session tasks: %s", e)
+                    self.session_active = False
                     if send_task and not send_task.done():
                         send_task.cancel()
                     if receive_task and not receive_task.done():
                         receive_task.cancel()
-                    if send_task and receive_task:
+                    if heartbeat_task and not heartbeat_task.done():
+                        heartbeat_task.cancel()
+                    if send_task and receive_task and heartbeat_task:
                         await asyncio.gather(
-                            send_task, receive_task, return_exceptions=True
+                            send_task, receive_task, heartbeat_task, return_exceptions=True
                         )
                 finally:
+                    self.session_active = False
                     if send_task and not send_task.done():
                         send_task.cancel()
                     if receive_task and not receive_task.done():
                         receive_task.cancel()
+                    if heartbeat_task and not heartbeat_task.done():
+                        heartbeat_task.cancel()
                     logger.info("Lyria session tasks cleaned up")
 
         except Exception as e:
