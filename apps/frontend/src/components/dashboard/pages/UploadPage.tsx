@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { VideoUploadForm } from '../upload/VideoUploadForm';
 import { useErrorHandler } from '../../../lib/utils/error-handler';
 import { ErrorBanner, useErrorState } from '../../ui/error-banner';
+import { amplifyAuth } from '../../../lib/auth';
 
 export function UploadPage() {
   const router = useRouter();
@@ -36,8 +37,15 @@ export function UploadPage() {
       formData.append('file', file);
       formData.append('prompt', prompt);
 
+      const token = await amplifyAuth.getIdToken();
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${apiUrl}/api/context`, {
         method: 'POST',
+        headers,
         body: formData,
       });
 

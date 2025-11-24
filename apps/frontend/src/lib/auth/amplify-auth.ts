@@ -304,4 +304,22 @@ export const amplifyAuth = {
       throw mapAmplifyError(error);
     }
   },
+
+  /**
+   * Gets the ID token for the current authenticated user
+   */
+  getIdToken: async (): Promise<string | null> => {
+    try {
+      const session = await fetchAuthSession();
+
+      if (!session.tokens?.idToken) {
+        return null;
+      }
+
+      return session.tokens.idToken.toString();
+    } catch (error: any) {
+      console.error('Get ID token error:', error);
+      return null;
+    }
+  },
 };

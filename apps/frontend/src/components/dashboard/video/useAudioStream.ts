@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { processAudioChunk } from './audioUtils';
 import { MusicalContext } from './MusicalContextDisplay';
+import { amplifyAuth } from '../../../lib/auth';
 
 interface UseAudioStreamProps {
     videoDuration: number;
@@ -151,10 +152,14 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
         wsRef.current = ws;
         ws.binaryType = 'arraybuffer';
 
-        ws.onopen = () => {
+        ws.onopen = async () => {
             console.log('WebSocket connected');
             if (sessionId) {
-                ws.send(JSON.stringify({ session_id: sessionId }));
+                const token = await amplifyAuth.getIdToken();
+                ws.send(JSON.stringify({
+                    session_id: sessionId,
+                    token: token
+                }));
             } else {
                 console.error('No session ID provided to useAudioStream');
                 ws.close();
