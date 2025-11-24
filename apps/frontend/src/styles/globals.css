@@ -15,7 +15,9 @@
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   html {
@@ -47,7 +49,11 @@
   }
 
   .liquid-glass-accent {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+    background: linear-gradient(
+      135deg,
+      rgba(99, 102, 241, 0.1),
+      rgba(139, 92, 246, 0.1)
+    );
     backdrop-filter: blur(10px);
     border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: 16px;
@@ -63,14 +69,22 @@
   }
 
   .gradient-text {
-    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(
+      to right,
+      var(--accent-primary),
+      var(--accent-secondary)
+    );
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
   }
 
   .gradient-button {
-    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(
+      to right,
+      var(--accent-primary),
+      var(--accent-secondary)
+    );
     background-size: 200% 200%;
     animation: gradient-shift 8s ease-in-out infinite;
   }
@@ -78,7 +92,8 @@
 
 /* Animations */
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -87,7 +102,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -96,7 +112,8 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(1);
   }

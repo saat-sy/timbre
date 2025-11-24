@@ -43,7 +43,7 @@ module.exports = {
     },
   },
   plugins: [
-    function({ addUtilities }) {
+    function ({ addUtilities }) {
       const newUtilities = {
         '.liquid-glass': {
           background: 'rgba(255, 255, 255, 0.05)',
@@ -69,8 +69,8 @@ module.exports = {
           border: '1px solid rgba(139, 92, 246, 0.2)',
           borderRadius: '20px',
         },
-      }
-      addUtilities(newUtilities)
-    }
+      };
+      addUtilities(newUtilities);
+    },
   ],
-}
+};

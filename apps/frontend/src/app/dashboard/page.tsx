@@ -1,12 +1,13 @@
 'use client';
 
 import { withConfirmedAuth } from '../../lib/auth';
-import { DashboardLayout } from '../../components/dashboard/dashboard-layout';
-import { useDashboard } from '../../components/dashboard/dashboard-context';
-import { UploadPage } from '../../components/dashboard/upload-page';
-import { HistoryPage } from '../../components/dashboard/history-page';
-import { SettingsPage } from '../../components/dashboard/settings-page';
-import { AccountPage } from '../../components/dashboard/account-page';
+import {
+  DashboardLayout,
+  useDashboard,
+  UploadPage,
+  SettingsPage,
+  AccountPage,
+} from '../../components/dashboard';
 
 function DashboardContent() {
   const { activePage } = useDashboard();
@@ -15,8 +16,6 @@ function DashboardContent() {
     switch (activePage) {
       case 'upload':
         return <UploadPage />;
-      case 'history':
-        return <HistoryPage />;
       case 'settings':
         return <SettingsPage />;
       case 'account':
