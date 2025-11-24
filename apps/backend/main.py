@@ -11,6 +11,7 @@ from fastapi import (
     HTTPException,
     File,
     status,
+    Depends,
 )
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,7 @@ from service.global_eval.global_eval_service import GlobalEvalService
 from service.lyria.lyria_service import LyriaService
 from shared.logging import get_logger
 from service.redis_service import RedisService
+from service.auth.dependencies import get_current_user, get_ws_token
 
 logger = get_logger(__name__)
 load_dotenv()
@@ -62,7 +64,8 @@ app.add_middleware(
 async def get_context(
     file: UploadFile = File(
         ..., description="MP4 video file to analyze", media_type="video/mp4"
-    )
+    ),
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> Dict[str, Any]:
     logger.info("Processing video file for global context extraction")
 
@@ -148,7 +151,14 @@ async def get_context(
 
 
 @app.websocket("/ws/music")
-async def music_websocket_endpoint(websocket: WebSocket):
+async def music_websocket_endpoint(websocket: WebSocket, token: str):
+    try:
+        await get_ws_token(token)
+    except Exception as e:
+        logger.error(f"WebSocket authentication failed: {e}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await websocket.accept()
     logger.info("WebSocket connection accepted")
 
