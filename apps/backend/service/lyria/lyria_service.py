@@ -1,5 +1,6 @@
 import os
 import asyncio
+import numpy as np
 from google import genai
 from google.genai import types
 from google.genai.live_music import AsyncMusicSession
@@ -24,6 +25,8 @@ class LyriaService:
         self.HEARTBEAT_INTERVAL = 10.0
         self.HEARTBEAT_TIMEOUT = 30.0
 
+        self.gain = 0.3
+
         if not os.getenv("GOOGLE_API_KEY"):
             raise ValueError("GOOGLE_API_KEY not found in environment variables")
         self.client = genai.Client(
@@ -42,6 +45,23 @@ class LyriaService:
         ].lyria_config
 
         logger.info("LyriaService initialized successfully")
+
+    def _apply_audio_gain(self, audio_data: bytes) -> bytes:
+        if self.gain == 1.0:
+            return audio_data
+            
+        try:
+            audio_array = np.frombuffer(audio_data, dtype=np.int16)
+            
+            adjusted_array = audio_array.astype(np.float32) * self.gain
+            
+            adjusted_array = np.clip(adjusted_array, -32768, 32767).astype(np.int16)
+            
+            return adjusted_array.tobytes()
+            
+        except Exception as e:
+            logger.warning(f"Failed to apply audio gain: {e}. Returning original audio.")
+            return audio_data
 
     async def _proxy_commands_to_lyria(self, session: AsyncMusicSession) -> None:
         logger.info("Command loop started. Waiting for commands from client.")
@@ -97,9 +117,8 @@ class LyriaService:
                         self.elapsed_music_time,
                         end,
                     )
-                    new_config = self.llm_response.master_plan.musical_blocks[
-                        i + 1
-                    ].lyria_config
+                    music_block = self.llm_response.master_plan.musical_blocks[i + 1]
+                    new_config = music_block.lyria_config
                     update_config = False
                     if self.current_config.bpm != new_config.bpm:
                         self.config.bpm = new_config.bpm
@@ -125,6 +144,8 @@ class LyriaService:
                             )
                         ]
                     )
+
+                    self.gain = music_block.gain
 
                     self.current_config = new_config
                 else:
@@ -179,10 +200,13 @@ class LyriaService:
                             await self.user_websocket.send_text(Commands.PLAYING)
                             logger.info("Sent playing message to client")
                             first_chunk_sent = True
-                        await self.user_websocket.send_bytes(audio_data)
+                        
+                        adjusted_audio_data = self._apply_audio_gain(audio_data)
+                        await self.user_websocket.send_bytes(adjusted_audio_data)
                         self.elapsed_music_time += 2  # 2 seconds are sent in each chunk
                         logger.info(
-                            "Sent audio chunk to client, total elapsed music time: %.2f seconds",
+                            "Sent audio chunk to client with gain applied (%.1fx), total elapsed music time: %.2f seconds",
+                            self.gain,
                             self.elapsed_music_time,
                         )
                         await self._check_for_music_update(session)
