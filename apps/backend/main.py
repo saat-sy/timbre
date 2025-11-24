@@ -1,5 +1,7 @@
+import os
 import json
 import uvicorn
+from contextlib import asynccontextmanager
 from typing import Dict, Any
 from fastapi import (
     FastAPI,
@@ -10,24 +12,46 @@ from fastapi import (
     File,
     status,
 )
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from google.genai import types
-from models.llm_response import LLMResponse
 from service.global_eval.global_eval_service import GlobalEvalService
 from service.lyria.lyria_service import LyriaService
-from models.lyria_config import LyriaConfig
-from service.realtime_eval.realtime_eval_service import RealtimeEvalService
-from shared.commands import Commands
 from shared.logging import get_logger
+from service.redis_service import RedisService
 
 logger = get_logger(__name__)
+load_dotenv()
 
-app = FastAPI(title="Timbre Backend")
+redis_service = RedisService(
+    redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+    session_ttl=int(os.getenv("REDIS_SESSION_TTL", "3600")),
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        await redis_service.connect()
+        logger.info("Application startup completed - Redis connected")
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis on startup: {e}")
+
+    yield
+
+    # Shutdown
+    try:
+        await redis_service.disconnect()
+        logger.info("Application shutdown completed - Redis disconnected")
+    except Exception as e:
+        logger.error(f"Error during Redis cleanup on shutdown: {e}")
+
+
+app = FastAPI(title="Timbre Backend", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,11 +79,12 @@ async def get_context(
             detail="Only MP4 video files are supported",
         )
 
-    if file.size and file.size > 50 * 1024 * 1024:
+    max_file_size = int(os.getenv("MAX_FILE_SIZE", str(50 * 1024 * 1024)))
+    if file.size and file.size > max_file_size:
         logger.error(f"File size too large: {file.size} bytes")
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="Video file size must be less than 50MB",
+            detail=f"Video file size must be less than {max_file_size // (1024 * 1024)}MB",
         )
 
     try:
@@ -87,10 +112,23 @@ async def get_context(
                 f"Successfully extracted context for video file: {file.filename}"
             )
 
-            response_dict = config.dict()
-            response_dict["temp_video_path"] = global_context_service.temp_video_path
-            
-            return config.dict()
+            try:
+                session_id = await redis_service.store_session(config)
+                logger.info(f"Session {session_id} created for video: {file.filename}")
+                return {
+                    "session_id": session_id,
+                    "message": "Video analysis completed successfully",
+                    "expires_in": redis_service.session_ttl,
+                }
+            except Exception as redis_error:
+                logger.error(f"Failed to store session in Redis: {redis_error}")
+                logger.warning("Falling back to returning configuration directly")
+                return {
+                    "session_id": None,
+                    "config": config,
+                    "message": "Video analysis completed, but session storage failed",
+                    "warning": "Session not stored - using direct response",
+                }
 
         except Exception as service_error:
             logger.error(f"Global evaluation service error: {service_error}")
@@ -118,82 +156,41 @@ async def music_websocket_endpoint(websocket: WebSocket):
         message = await websocket.receive_text()
         data = json.loads(message)
 
-        required_fields = [
-            Commands.PROMPT,
-            Commands.BPM,
-            Commands.SCALE,
-            Commands.WEIGHT,
-            Commands.CONTEXT,
-            Commands.TRANSCRIPTION,
-            "temp_video_path"
-        ]
-        missing_fields = [field for field in required_fields if not data.get(field)]
-
-        if missing_fields:
-            logger.error("Missing required parameters: %s", ", ".join(missing_fields))
-            await websocket.close(
-                code=1003, reason=f"Missing parameters: {', '.join(missing_fields)}"
-            )
+        if "session_id" not in data:
+            logger.error("Missing session_id in WebSocket message")
+            await websocket.close(code=1003, reason="session_id is required")
             return
 
         try:
-            prompt = data.get(Commands.PROMPT)
-            bpm = int(data.get(Commands.BPM))
-            scale_str = data.get(Commands.SCALE)
-            weight = float(data.get(Commands.WEIGHT))
-            context = data.get(Commands.CONTEXT)
-            transcription = data.get(Commands.TRANSCRIPTION)
-            temp_video_path = data.get("temp_video_path")
+            session_id = data["session_id"]
+            llm_response = await redis_service.get_session(session_id)
 
-            if bpm < 30 or bpm > 300:
-                logger.error("BPM value %d is outside valid range (30-300)", bpm)
-                await websocket.close(
-                    code=1003, reason="BPM must be between 30 and 300"
-                )
+            if llm_response is None:
+                logger.error(f"Session {session_id} not found or expired")
+                await websocket.close(code=1003, reason="Session not found or expired")
                 return
 
-            if weight < 0.0 or weight > 10.0:
-                logger.error(
-                    "Weight value %.2f is outside valid range (0.0-10.0)", weight
-                )
-                await websocket.close(
-                    code=1003, reason="Weight must be between 0.0 and 10.0"
-                )
-                return
+            await redis_service.extend_session_ttl(session_id)
+            logger.info(f"Retrieved and extended session {session_id}")
 
-            scale_enum = None
-            for scale_member in types.Scale:
-                if scale_member.name.lower() == scale_str.lower():
-                    scale_enum = scale_member
-                    break
-
-            if scale_enum is None:
-                logger.error("Invalid scale value: %s", scale_str)
-                await websocket.close(code=1003, reason=f"Invalid scale: {scale_str}")
-                return
-
-            lyria_config = LyriaConfig(
-                prompt=prompt, bpm=bpm, scale=scale_enum, weight=weight
-            )
-
-            global_config = LLMResponse(
-                lyria_config=lyria_config,
-                context=context,
-                transcription=str(transcription),
-            )
-        except ValueError as e:
-            logger.error("Invalid data type in parameters: %s", e)
-            await websocket.close(code=1003, reason="Invalid parameter format")
+        except Exception as e:
+            logger.error("Could not fetch session values from redis: %s", e)
+            await websocket.close(code=1003, reason="Failed to retrieve session data")
             return
-        
-        realtime_eval_service = RealtimeEvalService(
-            transcription=transcription,
-            global_config=global_config,
-            temp_video_path=temp_video_path,
+
+        await websocket.send_text(
+            json.dumps(
+                {
+                    "type": "session_data",
+                    "data": redis_service._llm_response_to_dict(llm_response),
+                }
+            )
         )
 
-        lyria_service = LyriaService(user_websocket=websocket, realtime_eval_service=realtime_eval_service)
-        await lyria_service.start_session(lyria_config=lyria_config)
+        lyria_service = LyriaService(
+            user_websocket=websocket, llm_response=llm_response
+        )
+        await lyria_service.start_session()
 
         logger.info("Lyria session started successfully")
     except WebSocketDisconnect:
@@ -215,4 +212,9 @@ async def music_websocket_endpoint(websocket: WebSocket):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "8000")),
+        reload=os.getenv("RELOAD", "false").lower() == "true",
+    )

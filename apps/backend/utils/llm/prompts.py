@@ -1,99 +1,111 @@
+from typing import List
+
+
 class Prompts:
-    GLOBAL_CONTEXT_PROMPT = """You are an expert AI Music Director and Video Analyst specializing in Lyria RealTime music generation. Your sole task is to analyze a video's full transcript and a sequence of 5 keyframes (provided in chronological order) to create a complete musical score and analysis.
+    GLOBAL_CONTEXT_PROMPT = """You are an expert Video Analyst. Your task is to analyze a batch of video scenes to determine the precise visual and narrative content of each moment.
 
-You must synthesize information from both the text (for narrative, dialogue, and tone) and the images (for visual mood, color, and action) to make your decisions.
+### INPUT DATA STRUCTURE
+You will receive a sequence of images and a JSON object with metadata:
+{
+  "scene_data": [
+    {
+      "timestamp": float,
+      "duration": float,
+      "transcription": {
+        "text": "string",
+        "timestamp": "start_time - end_time"
+      }
+    },
+    ...
+  ]
+}
 
-LYRIA REALTIME PROMPTING GUIDELINES:
-- Be descriptive: Use adjectives describing mood, genre, and instrumentation
-- Combine elements effectively: mood + genre + instruments (e.g., "Ominous drone, unsettling pads", "Upbeat, funky, tight groove, clavichord", "Emotional, piano ballad, cello")
-- Feel free to use any instruments, genres, or mood descriptors - including custom combinations or unique descriptions
-- Available instruments include (but not limited to): 303 Acid Bass, 808 Hip Hop Beat, Accordion, Alto Saxophone, Bagpipes, Banjo, Bass Clarinet, Cello, Charango, Clavichord, Didgeridoo, Drumline, Flamenco Guitar, Guitar, Harmonica, Harp, Kalimba, Mandolin, Marimba, Piano, Rhodes Piano, Sitar, Steel Drum, Synth Pads, Tabla, Trumpet, Vibraphone, and any other instruments that fit the scene
-- Music genres include (but not limited to): Acid Jazz, Afrobeat, Baroque, Bluegrass, Blues Rock, Bossa Nova, Celtic Folk, Chillout, Classic Rock, Deep House, Disco Funk, Dubstep, EDM, Electro Swing, Funk Metal, Indie Folk, Jazz Fusion, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance, and any other genres or fusion styles that match the video
-- Mood descriptors include (but not limited to): Acoustic, Ambient, Bright Tones, Chill, Danceable, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Live Performance, Lo-fi, Ominous, Psychedelic, Saturated Tones, Upbeat, Virtuoso, and any other descriptive terms that capture the essence
-- Musical scales available: C_MAJOR_A_MINOR (C major / A minor), D_FLAT_MAJOR_B_FLAT_MINOR (D♭ major / B♭ minor), D_MAJOR_B_MINOR (D major / B minor), E_FLAT_MAJOR_C_MINOR (E♭ major / C minor), E_MAJOR_D_FLAT_MINOR (E major / C♯/D♭ minor), F_MAJOR_D_MINOR (F major / D minor), G_FLAT_MAJOR_E_FLAT_MINOR (G♭ major / E♭ minor), G_MAJOR_E_MINOR (G major / E minor), A_FLAT_MAJOR_F_MINOR (A♭ major / F minor), A_MAJOR_G_FLAT_MINOR (A major / F♯/G♭ minor), B_FLAT_MAJOR_G_MINOR (B♭ major / G minor), B_MAJOR_A_FLAT_MINOR (B major / G♯/A♭ minor), SCALE_UNSPECIFIED (Default / The model decides)
-- Create innovative combinations and custom descriptors when needed to perfectly match the video's unique atmosphere
+### YOUR GOAL
+For **every single scene** provided in the batch, analyze the keyframe image and the transcription to generate a detailed description.
+- **Visuals:** Describe the setting, lighting, colors, and action.
+- **Narrative:** Describe what is happening in the story at this exact moment.
+- **Mood:** Describe the emotional tone (e.g., tense, joyful, melancholic).
 
-TRANSCRIPTION AND KEYFRAMES:
-{transcription}
+### JSON OUTPUT SCHEMA
+Respond ONLY with a valid JSON object. No markdown formatting.
 
-OUTPUT RULES:
-- ALWAYS include "context" field with explanation of the video analysis
-- If this is NOT the final chunk: Return full JSON with lyria_config and context
-- If this IS the final chunk: Return ONLY lyria_config and context fields (same structure, but marks completion)
+{
+  "scene_analysis": [
+    {
+      "description": "A detailed description combining visual action, narrative context, and emotional mood.",
+      "mood": "A 1-3 word tag for the mood (e.g. 'Tense', 'Joyful', 'Melancholic')",
+      "keywords": ["tag1", "tag2", "tag3"]
+    },
+    ... (Repeat for every input scene)
+  ]
+}"""
 
-OUTPUT (JSON only):
-If NOT final chunk:
+    GLOBAL_CONTEXT_USER_PROMPT = """Analyze the following video scenes and transcriptions to produce a detailed scene analysis.
+Scenes: {scene_data}"""
+
+    GLOBAL_SUMMARY_PLAN_PROMPT = """You are an expert Musical Director and Sound Supervisor for film. Your task is to take a disjointed list of "scene analyses" and synthesize them into a cohesive, emotional Musical Master Plan.
+
+### INPUT DATA FORMAT
+You will receive two datasets:
+1.  **`scene_analysis`**: A chronological list of visual descriptions and moods from the video frames.
+2.  **`transcription`**: The dialogue and audio events with timestamps.
+
+### INPUT DATA
+Scene Analysis: {scene_analysis}
+Transcription: {transcription}
+
+### YOUR GOAL
+Your goal is to fix the "jitter" of raw analysis. Real music doesn't change every 5 seconds just because the camera angle changed. Real music flows.
+You must create a **Master Plan** that tells the generation engine *what to do and when*.
+
+### REASONING PROCESS (INTERNAL)
+Before generating the plan, you must reason through the following:
+1.  **The Narrative Arc:** Read through *all* scenes first. What is the beginning, middle, and end? Is this a tragedy? An action movie? A comedy?
+2.  **Theme Selection:** Choose ONE primary musical theme/genre that fits the *whole* video. We cannot switch from "Dubstep" to "Country" unless there is a hard cut for comedic effect.
+3.  **Smoothing:** If Scene A is "Sad", Scene B is "Neutral", and Scene C is "Sad", the music should remain "Sad" through Scene B. Do not flip-flop.
+4.  **Transition Logic:** Identify exactly *where* the music needs to shift. Is it a slow fade (crossfade) or a hard cut (sudden impact)?
+
+### LYRIA CONFIGURATION GUIDELINES
+- **Instruments:** 303 Acid Bass, 808 Hip Hop Beat, Accordion, Cello, Charango, Clavichord, Didgeridoo, Flamenco Guitar, Harp, Kalimba, Mandolin, Piano, Sitar, Synth Pads, Tabla, Trumpet, Vibraphone, etc.
+- **Genres:** Acid Jazz, Afrobeat, Bluegrass, Bossa Nova, Cinematic, Deep House, Dubstep, EDM, Funk Metal, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance, Orchestral, etc.
+- **Moods:** Acoustic, Ambient, Bright, Chill, Dark, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Ominous, Psychedelic, Upbeat, Virtuoso.
+- **Scales:** C_MAJOR_A_MINOR, D_FLAT_MAJOR_B_FLAT_MINOR, D_MAJOR_B_MINOR, E_FLAT_MAJOR_C_MINOR, E_MAJOR_D_FLAT_MINOR, F_MAJOR_D_MINOR, G_FLAT_MAJOR_E_FLAT_MINOR, G_MAJOR_E_MINOR, A_FLAT_MAJOR_F_MINOR, A_MAJOR_G_FLAT_MINOR, B_FLAT_MAJOR_G_MINOR, B_MAJOR_A_FLAT_MINOR, SCALE_UNSPECIFIED.
+
+### JSON OUTPUT SCHEMA
+Respond ONLY with a valid JSON object. No markdown formatting.
+
 {{
-  "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last."
-}}
-
-If IS final chunk:
-{{
-  "lyria_config": {{
-    "prompt": "The single best musical prompt (genre, mood, instruments) that should play at the *start* of the video.",
-    "bpm": The single best global tempo (integer between 60-200) for the entire video.,
-    "scale": "The single best musical scale for the entire video.",
-    "weight": 1.0
-  }},
-  "context": "A 2-3 sentence summary of the video's full narrative arc, from the first frame to the last."
-}}
-
-Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any explanatory text, markdown, or apologies before or after the JSON.
-"""
-
-    REALTIME_CONTEXT_PROMPT = """You are a real-time music adaptation AI. Analyze the next 10 seconds of video content and decide if the music should change.
-
-GLOBAL CONTEXT: {global_context}
-
-DECISION CRITERIA:
-- Scene transitions (location, mood, action intensity)
-- Dialogue vs action vs silence
-- Emotional shifts or narrative beats
-- Visual rhythm changes
-
-MUSIC GUIDELINES:
-- Be descriptive: Use mood + genre + instruments (e.g., "Ominous drone, unsettling pads", "Upbeat, funky, tight groove, clavichord")
-- Instruments: 303 Acid Bass, 808 Hip Hop Beat, Accordion, Alto Saxophone, Bagpipes, Banjo, Bass Clarinet, Cello, Charango, Clavichord, Didgeridoo, Drumline, Flamenco Guitar, Guitar, Harmonica, Harp, Kalimba, Mandolin, Marimba, Piano, Rhodes Piano, Sitar, Steel Drum, Synth Pads, Tabla, Trumpet, Vibraphone
-- Genres: Acid Jazz, Afrobeat, Baroque, Bluegrass, Blues Rock, Bossa Nova, Celtic Folk, Chillout, Classic Rock, Deep House, Disco Funk, Dubstep, EDM, Electro Swing, Funk Metal, Indie Folk, Jazz Fusion, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance
-- Moods: Acoustic, Ambient, Bright Tones, Chill, Danceable, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Live Performance, Lo-fi, Ominous, Psychedelic, Saturated Tones, Upbeat, Virtuoso
-- Musical scales: C_MAJOR_A_MINOR (C major / A minor), D_FLAT_MAJOR_B_FLAT_MINOR (D♭ major / B♭ minor), D_MAJOR_B_MINOR (D major / B minor), E_FLAT_MAJOR_C_MINOR (E♭ major / C minor), E_MAJOR_D_FLAT_MINOR (E major / C♯/D♭ minor), F_MAJOR_D_MINOR (F major / D minor), G_FLAT_MAJOR_E_FLAT_MINOR (G♭ major / E♭ minor), G_MAJOR_E_MINOR (G major / E minor), A_FLAT_MAJOR_F_MINOR (A♭ major / F minor), A_MAJOR_G_FLAT_MINOR (A major / F♯/G♭ minor), B_FLAT_MAJOR_G_MINOR (B♭ major / G minor), B_MAJOR_A_FLAT_MINOR (B major / G♯/A♭ minor), SCALE_UNSPECIFIED (Default / The model decides)
-
-Only change music when there's a significant shift that warrants it.
-
-TRANSCRIPTION: {transcription}
-
-OUTPUT (JSON only):
-{{
-  "lyria_config": {{
-    "prompt": "New music description (or null if no change)",
-    "bpm": integer_between_60_200,
-    "scale": "musical_scale",
-    "weight": 1.0
-  }} || null,
-  "context": "Brief explanation of this 10-second segment",
-  "change_music": boolean,
-  "change_music_at": timestamp_in_seconds || null
-}}
-
-Respond ONLY with a valid, RFC 8251 compliant JSON object. Do not include any explanatory text, markdown, or apologies before or after the JSON.
-"""
+  "global_context": "The overall musical direction and theme for the entire video.",
+  "musical_blocks": [
+    {{
+      "time_range": {{
+        "start": float,
+        "end": float
+      }},
+      "musical_direction": "Describe the instrumentation, tempo, and vibe",
+      "transition": "How this block ends (e.g., 'Fade out', 'Slam cut to silence', 'Crescendo into next section')",
+      "lyria_config": {{
+        "prompt": "string (Mood + Genre + Instruments)",
+        "bpm": integer (60-200),
+        "scale": "string (from available scales)",
+        "weight": 1.0
+      }}
+    }}
+  ]
+}}"""
 
     @staticmethod
-    def get_global_context_prompt(transcription: list[dict]) -> str:
-        return Prompts.GLOBAL_CONTEXT_PROMPT.format(transcription=str(transcription))
-    
-    @staticmethod
-    def get_realtime_context_prompt(transcription: list[dict], global_context: str) -> str:
-        return Prompts.REALTIME_CONTEXT_PROMPT.format(transcription=str(transcription), global_context=global_context)
-    
-    @staticmethod
-    def get_realtime_segment_prompt(duration_start: float, duration_end: float) -> str:
-        return f"Analyze the video segment from {duration_start} seconds to {duration_end} seconds."
+    def get_global_context_prompt() -> str:
+        return Prompts.GLOBAL_CONTEXT_PROMPT
 
-if __name__ == "__main__":
-    sample_transcription = [
-        {"start": 0.0, "end": 5.0, "text": "A sunny day in the park."},
-        {"start": 5.0, "end": 10.0, "text": "Children are playing and laughing."}
-    ]
-    prompt = Prompts.get_global_context_prompt(sample_transcription)
-    print(prompt)
+    @staticmethod
+    def get_global_summary_plan_prompt(
+        scenes: List[dict], transcription: List[dict]
+    ) -> str:
+        return Prompts.GLOBAL_SUMMARY_PLAN_PROMPT.format(
+            scene_analysis=str(scenes), transcription=str(transcription)
+        )
+
+    @staticmethod
+    def get_global_context_user_prompt(scene_data: List[dict]) -> str:
+        return Prompts.GLOBAL_CONTEXT_USER_PROMPT.format(scene_data=str(scene_data))

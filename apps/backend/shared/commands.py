@@ -3,8 +3,6 @@ class Commands:
     PLAYING = "PLAYING"
     PAUSE = "PAUSE"
     STOP = "STOP"
-    EVALUATE = "EVALUATE"
-    INJECT = "INJECT"
     COMMAND = "command"
     BPM = "bpm"
     SCALE = "scale"
@@ -12,5 +10,7 @@ class Commands:
     WEIGHT = "weight"
     CONTEXT = "context"
     TRANSCRIPTION = "transcription"
-    START_TIME = "start_time",
+    START_TIME = ("start_time",)
     END_TIME = "end_time"
+    HEARTBEAT = "heartbeat"
+    HEARTBEAT_ACK = "heartbeat_ack"
