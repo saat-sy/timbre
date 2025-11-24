@@ -18,7 +18,6 @@ interface AudioChunk {
 
 export function useAudioStream({ videoDuration, onStop, initialPaused = false, sessionId }: UseAudioStreamProps) {
     const audioContextRef = useRef<AudioContext | null>(null);
-    const gainNodeRef = useRef<GainNode | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
 
     const audioChunksRef = useRef<AudioChunk[]>([]);
@@ -48,10 +47,6 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
     useEffect(() => {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         audioContextRef.current = new AudioContextClass();
-
-        gainNodeRef.current = audioContextRef.current.createGain();
-        gainNodeRef.current.gain.value = 0.3;
-        gainNodeRef.current.connect(audioContextRef.current.destination);
 
         if (initialPaused && audioContextRef.current.state === 'running') {
             audioContextRef.current.suspend();
@@ -134,11 +129,7 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
 
             const source = audioContext.createBufferSource();
             source.buffer = chunk.buffer;
-            if (gainNodeRef.current) {
-                source.connect(gainNodeRef.current);
-            } else {
-                source.connect(audioContext.destination);
-            }
+            source.connect(audioContext.destination);
             source.start(start, offset, duration);
 
             activeSourcesRef.current.add(source);
@@ -249,11 +240,7 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
                         if (startTimeInContext + chunk.duration > audioContext.currentTime) {
                             const source = audioContext.createBufferSource();
                             source.buffer = chunk.buffer;
-                            if (gainNodeRef.current) {
-                                source.connect(gainNodeRef.current);
-                            } else {
-                                source.connect(audioContext.destination);
-                            }
+                            source.connect(audioContext.destination);
 
                             let start = startTimeInContext;
                             let offset = 0;
