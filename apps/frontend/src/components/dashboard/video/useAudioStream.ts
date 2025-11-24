@@ -138,7 +138,7 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
         });
     }, []);
 
-    const connect = useCallback(() => {
+    const connect = useCallback(async () => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
         console.log('Connecting to WebSocket...');
@@ -147,19 +147,18 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
         totalBufferedDurationRef.current = 0;
         audioChunksRef.current = [];
 
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/music';
+        const token = await amplifyAuth.getIdToken();
+        const baseWsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/music';
+        const wsUrl = token ? `${baseWsUrl}?token=${token}` : baseWsUrl;
+
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
         ws.binaryType = 'arraybuffer';
 
-        ws.onopen = async () => {
+        ws.onopen = () => {
             console.log('WebSocket connected');
             if (sessionId) {
-                const token = await amplifyAuth.getIdToken();
-                ws.send(JSON.stringify({
-                    session_id: sessionId,
-                    token: token
-                }));
+                ws.send(JSON.stringify({ session_id: sessionId }));
             } else {
                 console.error('No session ID provided to useAudioStream');
                 ws.close();
