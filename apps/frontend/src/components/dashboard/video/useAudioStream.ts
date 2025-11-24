@@ -171,6 +171,12 @@ export function useAudioStream({ videoDuration, onStop, initialPaused = false, s
 
                 try {
                     const parsedData = JSON.parse(event.data);
+
+                    if (parsedData.command === 'heartbeat') {
+                        ws.send(JSON.stringify({ command: 'heartbeat_ack' }));
+                        return;
+                    }
+
                     if (parsedData.type === 'session_data' && parsedData.data) {
                         console.log('Received session data:', parsedData.data);
                         setMusicalContext(parsedData as MusicalContext);
