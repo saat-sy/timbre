@@ -7,7 +7,7 @@ export {
   validateEmail,
   validatePassword,
   validatePasswordMatch,
-  getPasswordValidationErrors
+  getPasswordValidationErrors,
 } from './validation';
 
 // Amplify Auth Service
@@ -25,5 +25,5 @@ export {
   withAuth,
   withConfirmedAuth,
   useRedirectIfAuthenticated,
-  useRedirectUnconfirmed
+  useRedirectUnconfirmed,
 } from './middleware';

@@ -3,9 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { amplifyAuth, validateEmail, validatePassword, validatePasswordMatch, AuthError, useRedirectIfAuthenticated } from '../../../lib/auth';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import {
+  amplifyAuth,
+  validateEmail,
+  validatePassword,
+  validatePasswordMatch,
+  AuthError,
+  useRedirectIfAuthenticated,
+} from '../../../lib/auth';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -34,13 +41,13 @@ export default function RegisterPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
 
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
         [name]: '',
       }));
@@ -72,7 +79,9 @@ export default function RegisterPage() {
 
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
-    } else if (!validatePasswordMatch(formData.password, formData.confirmPassword)) {
+    } else if (
+      !validatePasswordMatch(formData.password, formData.confirmPassword)
+    ) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
@@ -90,9 +99,16 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await amplifyAuth.register(formData.email, formData.password, formData.firstName, formData.lastName);
+      await amplifyAuth.register(
+        formData.email,
+        formData.password,
+        formData.firstName,
+        formData.lastName
+      );
       localStorage.setItem('pendingVerificationEmail', formData.email);
-      router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
+      router.push(
+        `/auth/verify-email?email=${encodeURIComponent(formData.email)}`
+      );
     } catch (error) {
       if (error instanceof AuthError) {
         setErrors({
@@ -130,7 +146,10 @@ export default function RegisterPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* First Name Field */}
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
+              <label
+                htmlFor="firstName"
+                className="block text-sm font-medium text-gray-300 mb-2"
+              >
                 First Name
               </label>
               <input
@@ -139,8 +158,9 @@ export default function RegisterPage() {
                 name="firstName"
                 value={formData.firstName}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.firstName ? 'border-red-500/50' : 'border-white/10'
-                  } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                  errors.firstName ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
                 placeholder="First name"
                 disabled={isSubmitting}
               />
@@ -151,7 +171,10 @@ export default function RegisterPage() {
 
             {/* Last Name Field */}
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">
+              <label
+                htmlFor="lastName"
+                className="block text-sm font-medium text-gray-300 mb-2"
+              >
                 Last Name
               </label>
               <input
@@ -160,8 +183,9 @@ export default function RegisterPage() {
                 name="lastName"
                 value={formData.lastName}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.lastName ? 'border-red-500/50' : 'border-white/10'
-                  } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+                className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                  errors.lastName ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
                 placeholder="Last name"
                 disabled={isSubmitting}
               />
@@ -173,7 +197,10 @@ export default function RegisterPage() {
 
           {/* Email Field */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-300 mb-2"
+            >
               Email Address
             </label>
             <input
@@ -182,8 +209,9 @@ export default function RegisterPage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.email ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                errors.email ? 'border-red-500/50' : 'border-white/10'
+              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="your@email.com"
               disabled={isSubmitting}
             />
@@ -194,7 +222,10 @@ export default function RegisterPage() {
 
           {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-300 mb-2"
+            >
               Password
             </label>
             <input
@@ -203,8 +234,9 @@ export default function RegisterPage() {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.password ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                errors.password ? 'border-red-500/50' : 'border-white/10'
+              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="Password"
               disabled={isSubmitting}
             />
@@ -215,7 +247,10 @@ export default function RegisterPage() {
 
           {/* Confirm Password Field */}
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-300 mb-2"
+            >
               Confirm Password
             </label>
             <input
@@ -224,13 +259,16 @@ export default function RegisterPage() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'
+              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="Re-enter your password"
               disabled={isSubmitting}
             />
             {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
+              <p className="mt-1 text-sm text-red-400">
+                {errors.confirmPassword}
+              </p>
             )}
           </div>
 

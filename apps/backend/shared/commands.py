@@ -1,0 +1,16 @@
+class Commands:
+    PLAY = "START"
+    PLAYING = "PLAYING"
+    PAUSE = "PAUSE"
+    STOP = "STOP"
+    COMMAND = "command"
+    BPM = "bpm"
+    SCALE = "scale"
+    PROMPT = "prompt"
+    WEIGHT = "weight"
+    CONTEXT = "context"
+    TRANSCRIPTION = "transcription"
+    START_TIME = ("start_time",)
+    END_TIME = "end_time"
+    HEARTBEAT = "heartbeat"
+    HEARTBEAT_ACK = "heartbeat_ack"

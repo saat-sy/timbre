@@ -3,9 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, amplifyAuth, validateEmail, validatePassword, AuthError, useRedirectIfAuthenticated } from '../../../lib/auth';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import {
+  useAuth,
+  amplifyAuth,
+  validateEmail,
+  validatePassword,
+  AuthError,
+  useRedirectIfAuthenticated,
+} from '../../../lib/auth';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -41,13 +48,13 @@ export default function LoginPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
 
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
         [name]: '',
       }));
@@ -85,7 +92,7 @@ export default function LoginPage() {
     try {
       const user = await amplifyAuth.login(formData.email, formData.password);
       await refreshUser();
-      
+
       // Check custom:status attribute to determine where to redirect
       if (user.confirmationStatus === 'CONFIRMED') {
         router.push('/dashboard');
@@ -97,7 +104,9 @@ export default function LoginPage() {
         if (error.code === 'UserNotConfirmedException') {
           // Store email for verification page and redirect
           localStorage.setItem('pendingVerificationEmail', formData.email);
-          router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
+          router.push(
+            `/auth/verify-email?email=${encodeURIComponent(formData.email)}`
+          );
           return;
         }
         setErrors({
@@ -140,7 +149,10 @@ export default function LoginPage() {
 
           {/* Email Field */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-300 mb-2"
+            >
               Email Address
             </label>
             <input
@@ -149,8 +161,9 @@ export default function LoginPage() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.email ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                errors.email ? 'border-red-500/50' : 'border-white/10'
+              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="your@email.com"
               disabled={isSubmitting}
             />
@@ -161,7 +174,10 @@ export default function LoginPage() {
 
           {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-300 mb-2"
+            >
               Password
             </label>
             <input
@@ -170,8 +186,9 @@ export default function LoginPage() {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${errors.password ? 'border-red-500/50' : 'border-white/10'
-                } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
+              className={`w-full px-4 py-3 rounded-lg bg-white/5 border ${
+                errors.password ? 'border-red-500/50' : 'border-white/10'
+              } text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all`}
               placeholder="Your password"
               disabled={isSubmitting}
             />

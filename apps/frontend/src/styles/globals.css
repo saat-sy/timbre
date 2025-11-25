@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
-    --accent-primary: #6366f1;
-    --accent-secondary: #8b5cf6;
+    --bg-primary: #2d231b;
+    --bg-secondary: #383324;
+    --accent-primary: #ee872c;
+    --accent-secondary: #f95c34;
     --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
   }
@@ -15,7 +15,22 @@
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 300;
+    /* Light */
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 200;
+    /* Extra Light */
   }
 
   html {
@@ -24,32 +39,35 @@
 }
 
 @layer components {
+
   /* Base liquid glass effect */
   .liquid-glass {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-  }
-
-  .liquid-glass-primary {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px;
-  }
-
-  .liquid-glass-secondary {
     background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
   }
 
+  .liquid-glass-primary {
+    background: rgba(255, 85, 0, 0.08);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 85, 0, 0.15);
+    border-radius: 16px;
+  }
+
+  .liquid-glass-secondary {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+  }
+
   .liquid-glass-accent {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    background: linear-gradient(135deg,
+        rgba(255, 85, 0, 0.1),
+        rgba(255, 0, 85, 0.1));
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 85, 0, 0.2);
     border-radius: 16px;
   }
 
@@ -63,14 +81,18 @@
   }
 
   .gradient-text {
-    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(to right,
+        var(--accent-primary),
+        var(--accent-secondary));
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
   }
 
   .gradient-button {
-    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(to right,
+        var(--accent-primary),
+        var(--accent-secondary));
     background-size: 200% 200%;
     animation: gradient-shift 8s ease-in-out infinite;
   }
@@ -78,28 +100,37 @@
 
 /* Animations */
 @keyframes gradient-shift {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-20px);
   }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.8;
     transform: scale(1.05);
@@ -111,6 +142,7 @@
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

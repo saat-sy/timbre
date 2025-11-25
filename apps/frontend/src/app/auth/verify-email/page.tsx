@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
 import { useAuth } from '../../../lib/auth';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 
 export default function VerifyEmailPage() {
   const [verificationCode, setVerificationCode] = useState('');
@@ -24,7 +24,7 @@ export default function VerifyEmailPage() {
     // Get email from URL params or localStorage
     const emailParam = searchParams.get('email');
     const storedEmail = localStorage.getItem('pendingVerificationEmail');
-    
+
     if (emailParam) {
       setEmail(emailParam);
       localStorage.setItem('pendingVerificationEmail', emailParam);
@@ -38,7 +38,7 @@ export default function VerifyEmailPage() {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!verificationCode.trim()) {
       setError('Please enter the verification code');
       return;
@@ -60,18 +60,17 @@ export default function VerifyEmailPage() {
       });
 
       setSuccess('Email verified successfully! Redirecting to login...');
-      
+
       // Clear stored email
       localStorage.removeItem('pendingVerificationEmail');
-      
+
       // Redirect to login page with verification success flag
       setTimeout(() => {
         router.push('/auth/login?verified=true');
       }, 2000);
-
     } catch (error: any) {
       console.error('Email verification error:', error);
-      
+
       switch (error.name) {
         case 'CodeMismatchException':
           setError('Invalid verification code. Please check and try again.');
@@ -111,7 +110,7 @@ export default function VerifyEmailPage() {
       setSuccess('Verification code sent! Check your email.');
     } catch (error: any) {
       console.error('Resend code error:', error);
-      
+
       switch (error.name) {
         case 'UserNotFoundException':
           setError('User not found. Please try signing up again.');
@@ -120,7 +119,9 @@ export default function VerifyEmailPage() {
           setError('Invalid email address.');
           break;
         case 'TooManyRequestsException':
-          setError('Too many requests. Please wait before requesting another code.');
+          setError(
+            'Too many requests. Please wait before requesting another code.'
+          );
           break;
         default:
           setError(error.message || 'Failed to resend code. Please try again.');
@@ -134,7 +135,9 @@ export default function VerifyEmailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">Verify Your Email</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">
+          Verify Your Email
+        </h1>
         <p className="text-gray-400">
           We've sent a verification code to{' '}
           <span className="text-white font-medium">{email}</span>
@@ -146,7 +149,10 @@ export default function VerifyEmailPage() {
         <form onSubmit={handleVerifyCode} className="space-y-6">
           {/* Verification Code Input */}
           <div>
-            <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-300 mb-2">
+            <label
+              htmlFor="verificationCode"
+              className="block text-sm font-medium text-gray-300 mb-2"
+            >
               Verification Code
             </label>
             <input
@@ -189,9 +195,7 @@ export default function VerifyEmailPage() {
         {/* Resend Code */}
         <div className="mt-6 pt-6 border-t border-white/10">
           <div className="text-center space-y-4">
-            <p className="text-gray-400 text-sm">
-              Didn't receive the code?
-            </p>
+            <p className="text-gray-400 text-sm">Didn't receive the code?</p>
             <button
               onClick={handleResendCode}
               disabled={isResending}
@@ -206,13 +210,17 @@ export default function VerifyEmailPage() {
       {/* Instructions */}
       <LiquidGlassCard variant="secondary" className="p-6">
         <div className="space-y-4">
-          <h3 className="text-white font-medium">Email Verification - Step 1 of 2</h3>
+          <h3 className="text-white font-medium">
+            Email Verification - Step 1 of 2
+          </h3>
           <div className="text-gray-300 text-sm space-y-2">
             <p>• Look for an email from Timbre with your verification code</p>
             <p>• The code is 6 digits long</p>
             <p>• Check your spam folder if you don't see it</p>
             <p>• The code expires after 24 hours</p>
-            <p className="text-blue-400">• After verification, your account will await manual approval</p>
+            <p className="text-blue-400">
+              • After verification, your account will await manual approval
+            </p>
           </div>
         </div>
       </LiquidGlassCard>
