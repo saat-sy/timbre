@@ -1,6 +1,6 @@
 'use client';
 
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
+import { LiquidGlassCard } from '@/components/ui';
 
 export function SettingsPage() {
   return (
@@ -26,7 +26,7 @@ export function SettingsPage() {
                     Use dark theme throughout the application
                   </div>
                 </div>
-                <button className="w-12 h-6 bg-purple-500 rounded-full relative">
+                <button className="w-12 h-6 bg-accent-primary rounded-full relative">
                   <div className="w-5 h-5 bg-white rounded-full absolute right-0.5 top-0.5"></div>
                 </button>
               </div>
@@ -37,7 +37,7 @@ export function SettingsPage() {
                     Automatically save your work
                   </div>
                 </div>
-                <button className="w-12 h-6 bg-purple-500 rounded-full relative">
+                <button className="w-12 h-6 bg-accent-primary rounded-full relative">
                   <div className="w-5 h-5 bg-white rounded-full absolute right-0.5 top-0.5"></div>
                 </button>
               </div>

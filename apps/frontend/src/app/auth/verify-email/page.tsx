@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
 import { useAuth } from '../../../lib/auth';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 
 export default function VerifyEmailPage() {
   const [verificationCode, setVerificationCode] = useState('');

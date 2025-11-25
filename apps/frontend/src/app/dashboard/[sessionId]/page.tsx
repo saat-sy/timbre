@@ -16,41 +16,16 @@ function VideoPlayerContent() {
   const [musicalContext, setMusicalContext] = useState<any | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
-  // Extract current mood for dynamic background
-  const currentMood = musicalContext?.scene_analysis?.find(
-    (scene: any) => currentTime >= scene.start_time && currentTime < scene.end_time
-  )?.mood?.toLowerCase();
-
-  const getBackgroundGradient = (mood: string | undefined) => {
-    switch (mood) {
-      case 'tense':
-        return 'from-gray-900 via-blue-900/20 to-black';
-      case 'ominous':
-        return 'from-gray-900 via-purple-900/20 to-black';
-      case 'anticipatory':
-        return 'from-gray-900 via-yellow-900/20 to-black';
-      case 'confrontational':
-        return 'from-gray-900 via-red-900/20 to-black';
-      case 'chaotic':
-        return 'from-gray-900 via-orange-900/20 to-black';
-      case 'cautious':
-        return 'from-gray-900 via-indigo-900/20 to-black';
-      case 'anxious':
-        return 'from-gray-900 via-teal-900/20 to-black';
-      case 'serious':
-        return 'from-gray-900 via-slate-900/20 to-black';
-      case 'intense':
-        return 'from-gray-900 via-red-950/30 to-black';
-      case 'sarcastic':
-        return 'from-gray-900 via-pink-900/20 to-black';
-      case 'surprised':
-        return 'from-gray-900 via-cyan-900/20 to-black';
-      case 'resentful':
-        return 'from-gray-900 via-rose-900/20 to-black';
-      default:
-        return 'from-gray-900 via-gray-900 to-black';
+  // Add animation styles
+  const animationStyles = `
+    @keyframes slideFade {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-  };
+    .animate-slideFade {
+      animation: slideFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+  `;
 
   useEffect(() => {
     // Retrieve the uploaded video from sessionStorage
@@ -79,7 +54,7 @@ function VideoPlayerContent() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-3 border-white/20 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-3 border-white/20 border-t-accent-primary rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white/60 text-sm">Loading your video...</p>
         </div>
       </div>
@@ -123,32 +98,40 @@ function VideoPlayerContent() {
   }
 
   return (
-    <div className={`h-screen w-full flex flex-col gap-2 p-2 overflow-hidden transition-colors duration-1000 bg-gradient-to-br ${getBackgroundGradient(currentMood)}`}>
+    <div className="h-[calc(100vh-4rem)] w-full flex flex-col gap-2 p-3 overflow-hidden relative">
+      <style>{animationStyles}</style>
+      
+      {/* Background - matching UploadPage style */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-900 -z-10" />
 
       {/* TOP: Global Context Only */}
-      <div className="shrink-0 z-20 relative">
+      <div className="shrink-0 z-20 relative animate-slideFade">
         <TopContextBar context={musicalContext} currentTime={currentTime} />
       </div>
 
       {/* MIDDLE: Video Player */}
-      <div className="flex-1 min-h-0 flex items-center justify-center relative bg-black/60 backdrop-blur-xl rounded-xl overflow-hidden border border-white/10 shadow-lg">
-
-        {/* Video Container */}
-        <div className="aspect-video w-full max-h-full max-w-5xl bg-black shadow-2xl rounded-xl overflow-hidden border border-white/10 ring-1 ring-white/5 relative z-10">
-          <CustomVideoPlayer
-            src={videoUrl}
-            initialPaused={true}
-            onTimeUpdate={(time: number) => setCurrentTime(time)}
-            onPlay={() => console.log('Command: PLAY')}
-            onPause={() => console.log('Command: PAUSE')}
-            onContextUpdate={setMusicalContext}
-            sessionId={sessionId}
-          />
+      <div className="flex-1 min-h-0 flex items-center justify-center relative z-10">
+        {/* Video Container with Enhanced Shadow */}
+        <div className="aspect-video w-full max-h-full max-w-5xl relative">
+          {/* Glow Effect Behind Video */}
+          <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/20 via-accent-secondary/20 to-accent-primary/20 blur-2xl scale-105 opacity-50" />
+          
+          <div className="relative z-10">
+            <CustomVideoPlayer
+              src={videoUrl}
+              initialPaused={true}
+              onTimeUpdate={(time: number) => setCurrentTime(time)}
+              onPlay={() => console.log('Command: PLAY')}
+              onPause={() => console.log('Command: PAUSE')}
+              onContextUpdate={setMusicalContext}
+              sessionId={sessionId}
+            />
+          </div>
         </div>
       </div>
 
-      {/* BOTTOM: Musical Block Card (Squared Up) */}
-      <div className="shrink-0 z-20 relative px-2">
+      {/* BOTTOM: Musical Block Card */}
+      <div className="shrink-0 z-20 relative animate-slideFade" style={{ animationDelay: '0.1s' }}>
         <MusicalBlockBar context={musicalContext} currentTime={currentTime} />
       </div>
 

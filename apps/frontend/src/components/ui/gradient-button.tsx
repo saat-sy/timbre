@@ -16,9 +16,9 @@ export interface GradientButtonProps {
 
 const variantStyles = {
   primary: [
-    'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500',
-    'hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600',
-    'text-white shadow-lg shadow-purple-500/25',
+    'bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary',
+    'hover:brightness-110 transition-all duration-300',
+    'text-white shadow-lg shadow-accent-primary/25',
     'border border-white/20'
   ].join(' '),
   secondary: [
@@ -43,7 +43,7 @@ const sizeStyles = {
 const LoadingSpinner = ({ size }: { size: 'sm' | 'md' | 'lg' }) => {
   const spinnerSize = {
     sm: 'w-3 h-3',
-    md: 'w-4 h-4', 
+    md: 'w-4 h-4',
     lg: 'w-5 h-5'
   };
 
@@ -56,16 +56,16 @@ const LoadingSpinner = ({ size }: { size: 'sm' | 'md' | 'lg' }) => {
 };
 
 export const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>(
-  ({ 
-    children, 
-    className, 
-    variant = 'primary', 
-    size = 'md', 
+  ({
+    children,
+    className,
+    variant = 'primary',
+    size = 'md',
     loading = false,
     disabled = false,
     onClick,
     type = 'button',
-    ...props 
+    ...props
   }, ref): JSX.Element => {
     const isDisabled = disabled || loading;
 
@@ -80,33 +80,33 @@ export const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>
           'relative overflow-hidden font-medium transition-all duration-300 ease-in-out',
           'backdrop-blur-md transform-gpu',
           'focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent',
-          
+
           // Size styles
           sizeStyles[size],
-          
+
           // Variant styles
           variantStyles[variant],
-          
+
           // Interactive states
           !isDisabled && [
             'hover:scale-105 hover:shadow-xl',
             'active:scale-95 active:transition-transform active:duration-75',
             'cursor-pointer'
           ],
-          
+
           // Disabled state
           isDisabled && [
             'opacity-50 cursor-not-allowed',
             'hover:scale-100 hover:shadow-lg'
           ],
-          
+
           className
         )}
         {...props}
       >
         {/* Glass morphism overlay */}
         <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-inherit" />
-        
+
         {/* Content */}
         <div className="relative flex items-center justify-center gap-2">
           {loading && <LoadingSpinner size={size} />}
@@ -114,7 +114,7 @@ export const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>
             {children}
           </span>
         </div>
-        
+
         {/* Hover effect overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
       </button>

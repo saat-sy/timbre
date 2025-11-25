@@ -45,25 +45,16 @@ export function Sidebar() {
           {/* Logo */}
           <button
             onClick={() => handleNavigation('upload')}
-            className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+            className="hover:opacity-80 transition-opacity"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-white"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-              </svg>
-            </div>
-            <span className="text-lg font-bold gradient-text">Timbre</span>
+            <span className="text-2xl font-light gradient-text">timbre</span>
           </button>
 
           {/* Navigation */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-sm font-semibold hover:opacity-80 transition-opacity"
+              className="w-8 h-8 bg-gradient-to-r from-accent-secondary to-accent-primary rounded-full flex items-center justify-center text-sm font-semibold hover:opacity-80 transition-opacity"
             >
               S
             </button>
@@ -73,7 +64,7 @@ export function Sidebar() {
                 <button
                   onClick={() => handleNavigation('account')}
                   className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${activePage === 'account' && pathname === '/dashboard'
-                    ? 'bg-purple-500/20 text-purple-400'
+                    ? 'bg-accent-primary/10 text-accent-primary'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
@@ -96,7 +87,7 @@ export function Sidebar() {
                 <button
                   onClick={() => handleNavigation('settings')}
                   className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${activePage === 'settings' && pathname === '/dashboard'
-                    ? 'bg-purple-500/20 text-purple-400'
+                    ? 'bg-accent-primary/10 text-accent-primary'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >

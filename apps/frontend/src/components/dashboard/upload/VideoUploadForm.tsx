@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { VideoUploader } from '@repo/ui/video-uploader';
+import { VideoUploader } from '@/components/ui';
 import { InlineError, useErrorState } from '../../ui/error-banner';
 
 interface SimpleVideoUploadProps {
   onSubmit?: (
     file: File,
-    prompt: string,
     onProgress?: (step: 'uploading' | 'scheduling' | null) => void
   ) => Promise<void>;
 }
@@ -15,7 +14,6 @@ interface SimpleVideoUploadProps {
 export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const {
     error: validationError,
@@ -92,7 +90,7 @@ export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
     [clearValidationError, setValidationError, generateThumbnail]
   );
 
-  const handleUploadComplete = useCallback(() => {}, []);
+  const handleUploadComplete = useCallback(() => { }, []);
 
   const handleUploadError = useCallback((error: string) => {
     console.error('Upload error:', error);
@@ -107,26 +105,19 @@ export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
       errors.push('Please select a file');
     }
 
-    if (!prompt.trim()) {
-      errors.push('Please enter a prompt');
-    } else if (prompt.length > 1000) {
-      errors.push('Prompt must be less than 1000 characters');
-    }
-
     if (errors.length > 0) {
       setValidationError(errors.join('; '));
       return;
     }
 
-    if (selectedFile && prompt.trim() && onSubmit) {
+    if (selectedFile && onSubmit) {
       setIsProcessing(true);
 
       try {
-        await onSubmit(selectedFile, prompt.trim());
+        await onSubmit(selectedFile);
 
         setSelectedFile(null);
         setVideoThumbnail(null);
-        setPrompt('');
         clearValidationError();
         setIsProcessing(false);
       } catch (error) {
@@ -136,278 +127,152 @@ export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
     }
   }, [
     selectedFile,
-    prompt,
     onSubmit,
     clearValidationError,
     setValidationError,
   ]);
 
-  const isReady =
-    selectedFile && prompt.trim() && !isProcessing && !validationError;
+  const isReady = selectedFile && !isProcessing && !validationError;
 
   return (
-    <div className="w-full max-w-3xl mx-auto relative">
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center space-x-3 mb-2">
-          <div className="flex items-center justify-center w-9 h-9 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 rounded-xl shadow-lg shadow-purple-500/20">
-            <svg
-              className="w-5 h-5 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-light text-white tracking-tight">
-            What can I create for you?
-          </h1>
-        </div>
+    <div className="h-full w-full flex items-center justify-center relative px-4 py-8 overflow-hidden">
+      {/* Background Ambience - positioned relative to viewport */}
+      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-accent-secondary/20 rounded-full blur-[100px] pointer-events-none transform -translate-x-1/2 -translate-y-1/2"></div>
+      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-accent-primary/20 rounded-full blur-[100px] pointer-events-none transform translate-x-1/2 translate-y-1/2"></div>
+      
+      <div className="w-full max-w-4xl relative z-10">
+
+      <div className="text-center mb-12 relative z-10">
+        <h1 className="text-5xl md:text-6xl font-extralight text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/70 tracking-tight mb-4 drop-shadow-sm leading-tight py-2">
+          Create Magic
+        </h1>
+        <p className="text-lg text-white/50 font-light tracking-wide">
+          Upload your video and let the AI compose the perfect soundtrack
+        </p>
       </div>
 
-      <div className="bg-gradient-to-br from-white/[0.07] to-white/[0.02] border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/40 backdrop-blur-xl transition-all duration-300 hover:border-white/20">
-        <div className="p-6 border-b border-white/10">
-          {videoThumbnail && selectedFile ? (
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <div className="relative group max-w-sm w-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity"></div>
-                  <img
-                    src={videoThumbnail}
-                    alt="Video thumbnail"
-                    className={`relative w-full h-auto rounded-2xl shadow-xl ring-1 ring-white/10 transition-opacity duration-300 ${isProcessing ? 'opacity-40' : ''}`}
-                  />
+      <div className="relative z-10">
+        <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 transition-all duration-500 hover:border-white/20 hover:shadow-accent-primary/10 group">
 
-                  {isProcessing && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50 backdrop-blur-[1px]">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 via-pink-500/20 to-purple-600/20 rounded-xl blur-md"></div>
-                        <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-xl px-5 py-3.5 shadow-xl">
-                          <div className="flex items-center space-x-3">
-                            <div className="relative w-4 h-4">
-                              <div className="absolute inset-0 border-2 border-white/20 rounded-full"></div>
-                              <div className="absolute inset-0 border-2 border-transparent border-t-white rounded-full animate-spin"></div>
-                            </div>
-                            <span className="text-white text-sm font-medium">
-                              Processing video
-                            </span>
+          {/* Main Content Area */}
+          <div className="p-8 md:p-12">
+            {videoThumbnail && selectedFile ? (
+              <div className="space-y-8 animate-in fade-in zoom-in duration-500">
+                <div className="flex justify-center">
+                  <div className="relative max-w-2xl w-full aspect-video rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 group-hover:ring-white/20 transition-all">
+                    <img
+                      src={videoThumbnail}
+                      alt="Video thumbnail"
+                      className={`w-full h-full object-cover transition-all duration-700 ${isProcessing ? 'scale-105 blur-sm opacity-50' : 'group-hover:scale-105'}`}
+                    />
+
+                    {/* Overlay Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+
+                    {/* File Info Badge */}
+                    <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                      <div className="flex items-center space-x-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                        <span className="text-sm font-medium text-white truncate max-w-[200px]">{selectedFile.name}</span>
+                        <span className="text-xs text-white/50 border-l border-white/20 pl-3">
+                          {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Remove Button */}
+                    {!isProcessing && (
+                      <button
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setVideoThumbnail(null);
+                          clearValidationError();
+                        }}
+                        className="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md hover:bg-white/10 border border-white/10 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 group/btn"
+                      >
+                        <svg className="w-5 h-5 text-white/70 group-hover/btn:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Processing State Overlay */}
+                    {isProcessing && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <div className="relative w-20 h-20 mb-4">
+                          <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
+                          <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            </svg>
                           </div>
                         </div>
+                        <span className="text-lg font-light text-white tracking-widest uppercase animate-pulse">Composing...</span>
                       </div>
-                    </div>
-                  )}
-                  {!isProcessing && (
-                    <button
-                      onClick={() => {
-                        setSelectedFile(null);
-                        setVideoThumbnail(null);
-                        clearValidationError();
-                      }}
-                      className="absolute -top-2 -right-2 w-8 h-8 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg hover:scale-110"
-                    >
-                      <svg
-                        className="w-4 h-4 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent rounded-b-2xl p-3 pt-8">
-                    <div className="flex items-center space-x-2.5">
-                      <div
-                        className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
-                          validationError
-                            ? 'bg-red-500/20 ring-1 ring-red-500/40'
-                            : 'bg-emerald-500/20 ring-1 ring-emerald-500/40'
-                        }`}
-                      >
-                        {validationError ? (
-                          <svg
-                            className="w-3.5 h-3.5 text-red-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="w-3.5 h-3.5 text-emerald-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className={`text-sm font-medium truncate transition-colors ${validationError ? 'text-red-300' : 'text-white'}`}
-                        >
-                          {selectedFile.name}
-                        </div>
-                        <div className="text-xs text-gray-300 mt-0.5">
-                          {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
+
+                {/* Action Bar */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!isReady || isProcessing}
+                    className={`
+                      relative group overflow-hidden rounded-full px-12 py-4 transition-all duration-300
+                      ${isReady && !isProcessing
+                        ? 'bg-white text-black hover:scale-105 hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]'
+                        : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/5'}
+                    `}
+                  >
+                    {isReady && !isProcessing && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                    )}
+                    <span className="relative flex items-center space-x-3 text-lg font-medium tracking-wide">
+                      {isProcessing ? (
+                        <span>Processing Video...</span>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Generate Music</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </div>
               </div>
-
-              {validationError && (
-                <div className="max-w-sm mx-auto">
-                  <InlineError
-                    error={validationError}
-                    size="sm"
-                    onDismiss={clearValidationError}
-                  />
+            ) : (
+              <div className="py-12">
+                <VideoUploader
+                  onFileSelect={handleFileSelect}
+                  onUploadComplete={handleUploadComplete}
+                  onUploadError={handleUploadError}
+                  maxSize={100}
+                  disabled={isProcessing}
+                  showUploadButton={false}
+                />
+                <div className="mt-8 text-center">
+                  <p className="text-white/30 text-sm font-light">Supported formats: MP4, MOV, WEBM • Max size: 100MB</p>
                 </div>
-              )}
-            </div>
-          ) : (
-            <VideoUploader
-              onFileSelect={handleFileSelect}
-              onUploadComplete={handleUploadComplete}
-              onUploadError={handleUploadError}
-              maxSize={100}
-              disabled={isProcessing}
-              showUploadButton={false}
-            />
-          )}
-        </div>
-
-        <div className="relative group/textarea">
-          <div className="relative bg-white/[0.03] rounded-b-lg border-t border-white/5 transition-all duration-300 group-focus-within/textarea:border-white/20 group-focus-within/textarea:bg-white/[0.05]">
-            <div className="px-5 pt-4 pb-3">
-              <textarea
-                value={prompt}
-                onChange={(e) => {
-                  setPrompt(e.target.value);
-                  if (validationError && e.target.value.trim()) {
-                    clearValidationError();
-                  }
-                }}
-                placeholder="Describe the music you want for your video..."
-                className={`w-full h-28 px-0 py-0 bg-transparent border-0 text-white placeholder-gray-500 focus:outline-none resize-none text-base leading-relaxed transition-colors ${
-                  validationError ? 'text-red-300 placeholder-red-400/50' : ''
-                }`}
-                disabled={isProcessing}
-              />
-            </div>
-
-            <div className="flex items-center justify-between px-5 pb-4 pt-2 border-t border-white/5">
-              <div className="flex items-center space-x-3">
-                <div
-                  className={`text-xs font-medium transition-colors ${
-                    prompt.length > 900
-                      ? 'text-orange-400'
-                      : prompt.length > 0
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
-                  }`}
-                >
-                  {prompt.length}/1000
-                </div>
-                {prompt.length > 0 && (
-                  <div className="flex items-center space-x-1.5 text-xs text-gray-500">
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                      />
-                    </svg>
-                    <span>Music prompt</span>
-                  </div>
-                )}
               </div>
+            )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={!isReady || isProcessing}
-                className={`group relative h-10 px-6 rounded-full font-medium text-sm transition-all duration-200 overflow-hidden ${
-                  isReady && !isProcessing
-                    ? 'bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:shadow-lg hover:shadow-purple-500/50 hover:scale-105'
-                    : 'bg-gray-700 opacity-50 cursor-not-allowed'
-                }`}
-              >
-                {isReady && !isProcessing && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                )}
-
-                <div className="relative flex items-center space-x-2 text-white">
-                  {isProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>Creating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                        />
-                      </svg>
-                      <span>Generate</span>
-                    </>
-                  )}
-                </div>
-              </button>
-            </div>
+            {validationError && (
+              <div className="mt-6 flex justify-center animate-in slide-in-from-bottom-2">
+                <InlineError
+                  error={validationError}
+                  size="sm"
+                  onDismiss={clearValidationError}
+                />
+              </div>
+            )}
           </div>
         </div>
-
-        {validationError && !selectedFile && (
-          <div className="px-6 pb-4 border-t border-white/10">
-            <div className="mt-3">
-              <InlineError
-                error={validationError}
-                size="sm"
-                onDismiss={clearValidationError}
-              />
-            </div>
-          </div>
-        )}
+      </div>
       </div>
     </div>
   );

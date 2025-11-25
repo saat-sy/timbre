@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 import Link from 'next/link';
 
 export function CTASection() {
@@ -13,14 +13,13 @@ export function CTASection() {
       <div className="max-w-4xl mx-auto text-center">
         <LiquidGlassCard
           variant="primary"
-          className={`p-12 transition-all duration-500 ${
-            isHovered ? 'scale-[1.02] shadow-2xl shadow-purple-500/20' : ''
-          }`}
+          className={`p-12 transition-all duration-500 ${isHovered ? 'scale-[1.02] shadow-2xl shadow-accent-primary/20' : ''
+            }`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           {/* Animated background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/10 via-accent-secondary/10 to-accent-primary/10 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-500" />
 
           <div className="relative z-10">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
@@ -63,20 +62,20 @@ export function CTASection() {
 
             {/* Trust indicators */}
             <div className="mt-8 pt-8 border-t border-white/10">
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm text-text-secondary mb-4">
                 Trusted by creators worldwide
               </p>
               <div className="flex justify-center items-center space-x-8 opacity-60">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-accent-primary rounded-full animate-pulse" />
                   <span className="text-sm">1000+ Videos Enhanced</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-300" />
+                  <div className="w-2 h-2 bg-accent-secondary rounded-full animate-pulse delay-300" />
                   <span className="text-sm">500+ Happy Creators</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-700" />
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse delay-700" />
                   <span className="text-sm">99% Satisfaction Rate</span>
                 </div>
               </div>

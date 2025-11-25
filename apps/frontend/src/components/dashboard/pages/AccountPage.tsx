@@ -2,8 +2,8 @@
 
 import { useAuth } from '../../../lib/auth';
 import { amplifyAuth } from '../../../lib/auth/amplify-auth';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 
 export function AccountPage() {
   const { user, refreshUser } = useAuth();
@@ -31,7 +31,7 @@ export function AccountPage() {
           {/* Profile Card */}
           <LiquidGlassCard className="p-6">
             <div className="flex items-center space-x-6">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-2xl font-bold text-white">
+              <div className="w-20 h-20 bg-gradient-to-r from-accent-primary to-accent-secondary rounded-full flex items-center justify-center text-2xl font-bold text-white">
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="flex-1">

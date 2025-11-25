@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { GradientButton } from '@/components/ui';
 
 export interface ErrorBannerProps {
   error: string | null;

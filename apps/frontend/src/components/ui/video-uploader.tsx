@@ -19,7 +19,7 @@ export interface VideoUploaderProps {
   acceptedFormats?: string[];
   className?: string;
   disabled?: boolean;
-  showUploadButton?: boolean; // New prop to control upload button visibility
+  showUploadButton?: boolean;
 }
 
 const DEFAULT_ACCEPTED_FORMATS = [
@@ -49,17 +49,15 @@ export function VideoUploader({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
   const validateFile = useCallback((file: File): string | null => {
-    // Check file type
     if (!acceptedFormats.includes(file.type)) {
       return `Invalid file format. Accepted formats: ${acceptedFormats.map(f => f.split('/')[1]).join(', ')}`;
     }
 
-    // Check file size (convert MB to bytes)
     const maxSizeBytes = maxSize * 1024 * 1024;
     if (file.size > maxSizeBytes) {
       return `File size too large. Maximum size: ${maxSize}MB`;
@@ -70,7 +68,7 @@ export function VideoUploader({
 
   const handleFileSelection = useCallback((file: File) => {
     setError(null);
-    
+
     const validationError = validateFile(file);
     if (validationError) {
       setError(validationError);
@@ -80,7 +78,6 @@ export function VideoUploader({
     setSelectedFile(file);
     onFileSelect(file);
 
-    // If showUploadButton is false, automatically trigger upload completion
     if (!showUploadButton) {
       const result = {
         filename: file.name,
@@ -98,14 +95,12 @@ export function VideoUploader({
     setError(null);
 
     try {
-      // Simulate upload progress
       for (let progress = 0; progress <= 100; progress += 10) {
         await new Promise(resolve => setTimeout(resolve, 200));
         setUploadProgress(progress);
         onUploadProgress?.(progress);
       }
 
-      // Simulate successful upload
       const result = {
         filename: file.name,
         size: file.size,
@@ -197,7 +192,6 @@ export function VideoUploader({
 
   return (
     <div className={cn("w-full", className)}>
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -207,12 +201,11 @@ export function VideoUploader({
         disabled={disabled}
       />
 
-      {/* Upload area */}
       <div
         className={cn(
           "relative liquid-glass-primary p-8 transition-all duration-300 ease-in-out",
           "border-2 border-dashed",
-          isDragOver && !disabled && "border-indigo-400 bg-indigo-500/10 scale-[1.02]",
+          isDragOver && !disabled && "border-accent-primary bg-accent-primary/10 scale-[1.02]",
           !isDragOver && "border-white/20 hover:border-white/40",
           disabled && "opacity-50 cursor-not-allowed",
           !disabled && "cursor-pointer",
@@ -225,10 +218,9 @@ export function VideoUploader({
         onClick={handleClick}
       >
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          {/* Upload icon */}
           <div className={cn(
             "w-16 h-16 rounded-full flex items-center justify-center transition-colors duration-300",
-            isDragOver ? "bg-indigo-500/20 text-indigo-400" : "bg-white/10 text-white/70"
+            isDragOver ? "bg-accent-primary/20 text-accent-primary" : "bg-white/10 text-white/70"
           )}>
             <svg
               className="w-8 h-8"
@@ -245,15 +237,14 @@ export function VideoUploader({
             </svg>
           </div>
 
-          {/* Upload text */}
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-white">
               {selectedFile ? "File Selected" : "Upload Video"}
             </h3>
             <p className="text-sm text-white/60">
-              {selectedFile 
+              {selectedFile
                 ? `${selectedFile.name} (${formatFileSize(selectedFile.size)})`
-                : isDragOver 
+                : isDragOver
                   ? "Drop your video file here"
                   : "Drag and drop your video file here, or click to browse"
               }
@@ -264,20 +255,18 @@ export function VideoUploader({
           </div>
         </div>
 
-        {/* Drag overlay */}
         {isDragOver && !disabled && (
-          <div className="absolute inset-0 bg-indigo-500/10 backdrop-blur-sm rounded-2xl border-2 border-indigo-400 flex items-center justify-center">
-            <div className="text-indigo-400 font-semibold">Drop to upload</div>
+          <div className="absolute inset-0 bg-accent-primary/10 backdrop-blur-sm rounded-2xl border-2 border-accent-primary flex items-center justify-center">
+            <div className="text-accent-primary font-semibold">Drop to upload</div>
           </div>
         )}
       </div>
 
-      {/* File actions */}
       {selectedFile && !isUploading && showUploadButton && (
         <div className="mt-4 flex gap-3">
           <button
             onClick={handleUploadClick}
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 hover:scale-105"
+            className="flex-1 px-4 py-2 bg-gradient-to-r from-accent-primary to-accent-secondary text-white rounded-xl font-medium hover:brightness-110 transition-all duration-300 hover:scale-105"
           >
             Start Upload
           </button>
@@ -290,7 +279,6 @@ export function VideoUploader({
         </div>
       )}
 
-      {/* Remove button only (when showUploadButton is false) */}
       {selectedFile && !isUploading && !showUploadButton && (
         <div className="mt-4">
           <button
@@ -302,7 +290,6 @@ export function VideoUploader({
         </div>
       )}
 
-      {/* Upload progress */}
       {isUploading && (
         <div className="mt-4 space-y-3">
           <div className="flex justify-between text-sm text-white/70">
@@ -311,14 +298,13 @@ export function VideoUploader({
           </div>
           <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300 ease-out"
+              className="h-full bg-gradient-to-r from-accent-primary to-accent-secondary transition-all duration-300 ease-out"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Error message */}
       {error && (
         <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
           <div className="flex items-center space-x-2">

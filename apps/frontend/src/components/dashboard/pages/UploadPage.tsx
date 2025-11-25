@@ -16,15 +16,14 @@ export function UploadPage() {
   >(null);
 
   // Store last submission for retry
-  let lastSubmission: { file: File; prompt: string } | null = null;
+  let lastSubmission: { file: File } | null = null;
 
   const handleSubmit = async (
     file: File,
-    prompt: string,
     onProgress?: (step: 'uploading' | 'scheduling' | null) => void
   ) => {
     clearError();
-    lastSubmission = { file, prompt };
+    lastSubmission = { file };
 
     try {
       setLoadingStep('uploading');
@@ -35,7 +34,6 @@ export function UploadPage() {
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('prompt', prompt);
 
       const token = await amplifyAuth.getIdToken();
       const headers: HeadersInit = {};
@@ -63,7 +61,6 @@ export function UploadPage() {
         JSON.stringify({
           videoUrl,
           fileName: file.name,
-          prompt,
         })
       );
 
@@ -86,16 +83,16 @@ export function UploadPage() {
 
   const handleRetry = () => {
     if (lastSubmission) {
-      handleSubmit(lastSubmission.file, lastSubmission.prompt);
+      handleSubmit(lastSubmission.file);
     }
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Error Banner - fixed height to prevent layout shift */}
-      <div className="flex justify-center pt-6 pb-4 min-h-[80px]">
-        {error && (
-          <div className="w-full max-w-4xl mx-auto px-6">
+    <div className="h-full relative overflow-hidden pt-16">
+      {/* Error Banner - absolute positioned below sidebar */}
+      {error && (
+        <div className="absolute top-6 left-0 right-0 z-50 flex justify-center px-6">
+          <div className="w-full max-w-4xl">
             <ErrorBanner
               error={error}
               title="Upload Failed"
@@ -106,11 +103,11 @@ export function UploadPage() {
               size="md"
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Centered Upload Interface - takes remaining space */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden mt-24">
+      {/* Centered Upload Interface - full remaining height */}
+      <div className="h-full">
         <VideoUploadForm onSubmit={handleSubmit} />
       </div>
     </div>

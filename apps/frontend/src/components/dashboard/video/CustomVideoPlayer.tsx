@@ -225,11 +225,11 @@ export function CustomVideoPlayer({
     }, [musicalContext, onContextUpdate]);
 
     return (
-        <div className="relative group rounded-2xl overflow-hidden border border-white/10">
+        <div className="relative group rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
             <video
                 ref={videoRef}
                 src={src}
-                className="w-full aspect-video object-contain cursor-pointer"
+                className="w-full aspect-video object-contain cursor-pointer bg-black"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={() => {
@@ -240,51 +240,61 @@ export function CustomVideoPlayer({
             />
 
             {/* Overlay Controls */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none">
 
-                {/* Progress Bar */}
-                <div
-                    ref={progressBarRef}
-                    className="w-full h-1.5 bg-white/20 rounded-full mb-4 overflow-hidden cursor-pointer pointer-events-auto hover:h-2.5 transition-all relative"
-                    onMouseDown={handleSeekStart}
-                >
-                    {/* Buffer Bar */}
+                {/* Progress Bar Container */}
+                <div className="mb-3 pointer-events-auto">
                     <div
-                        className="absolute top-0 left-0 h-full bg-white/30 transition-all duration-300 ease-linear"
-                        style={{ width: `${Math.min(bufferPercentage, 100)}%` }}
-                    />
+                        ref={progressBarRef}
+                        className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden cursor-pointer hover:h-2 transition-all relative group/progress"
+                        onMouseDown={handleSeekStart}
+                    >
+                        {/* Buffer Bar */}
+                        <div
+                            className="absolute top-0 left-0 h-full bg-white/20 transition-all duration-300 ease-linear"
+                            style={{ width: `${Math.min(bufferPercentage, 100)}%` }}
+                        />
 
-                    {/* Playback Progress */}
-                    <div
-                        className="h-full bg-purple-500 rounded-full transition-all duration-100 ease-linear relative z-10"
-                        style={{ width: `${progressPercentage}%` }}
-                    />
-                </div>
-
-                <div className="flex items-center justify-between pointer-events-auto">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                togglePlay();
-                            }}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all hover:scale-105 active:scale-95"
+                        {/* Playback Progress with Gradient */}
+                        <div
+                            className="h-full bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary rounded-full transition-all duration-100 ease-linear relative z-10 shadow-[0_0_8px_rgba(255,85,0,0.5)]"
+                            style={{ width: `${progressPercentage}%` }}
                         >
-                            {isPlaying ? (
-                                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                                </svg>
-                            ) : (
-                                <svg className="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                            )}
-                        </button>
-
-                        <div className="text-sm font-medium text-white/90 font-mono">
-                            {formatTime(currentTime)} / {formatTime(duration)}
+                            {/* Progress Thumb */}
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                         </div>
                     </div>
+                    
+                    {/* Time Display Below Progress */}
+                    <div className="flex items-center justify-between mt-1.5 px-0.5">
+                        <div className="text-xs font-mono text-white/70">
+                            {formatTime(currentTime)}
+                        </div>
+                        <div className="text-xs font-mono text-white/50">
+                            {formatTime(duration)}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Play/Pause Button Only */}
+                <div className="flex items-center pointer-events-auto">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            togglePlay();
+                        }}
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all hover:scale-110 active:scale-95 shadow-lg"
+                    >
+                        {isPlaying ? (
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                            </svg>
+                        ) : (
+                            <svg className="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -296,14 +306,14 @@ export function CustomVideoPlayer({
                             e.stopPropagation();
                             togglePlay();
                         }}
-                        className={`w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10 pointer-events-auto cursor-pointer hover:scale-110 transition-transform ${isConnecting || isBuffering ? 'cursor-wait' : ''}`}
+                        className={`w-20 h-20 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center border-2 border-white/20 pointer-events-auto cursor-pointer hover:scale-110 hover:bg-black/70 transition-all shadow-2xl ${isConnecting || isBuffering ? 'cursor-wait' : ''}`}
                     >
                         {!isConnecting && !isBuffering ? (
-                            <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
+                            <svg className="w-10 h-10 text-white fill-current ml-1" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                             </svg>
                         ) : (
-                            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                         )}
                     </div>
                 </div>
@@ -311,8 +321,11 @@ export function CustomVideoPlayer({
 
             {/* Buffering Spinner Overlay (when playing but buffering) */}
             {isPlaying && isBuffering && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 backdrop-blur-[1px]">
-                    <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-14 h-14 border-4 border-white/20 border-t-accent-primary rounded-full animate-spin" />
+                        <span className="text-white/70 text-sm font-medium">Buffering...</span>
+                    </div>
                 </div>
             )}
         </div>

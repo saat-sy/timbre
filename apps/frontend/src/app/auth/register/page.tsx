@@ -11,8 +11,8 @@ import {
   AuthError,
   useRedirectIfAuthenticated,
 } from '../../../lib/auth';
-import { LiquidGlassCard } from '@repo/ui/liquid-glass-card';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { LiquidGlassCard } from '@/components/ui';
+import { GradientButton } from '@/components/ui';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({

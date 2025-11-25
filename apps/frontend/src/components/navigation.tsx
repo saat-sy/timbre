@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { GradientButton } from '@repo/ui/gradient-button';
+import { GradientButton } from '@/components/ui';
 import Link from 'next/link';
 
 export function Navigation() {
@@ -30,37 +30,25 @@ export function Navigation() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-black/80 backdrop-blur-md border-b border-white/10'
-          : 'bg-transparent'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-300 ${isScrolled
+        ? 'bg-background-primary/80 backdrop-blur-md border-b border-white/5'
+        : 'bg-transparent'
+        }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center">
           <Link
             href="/"
-            className="text-2xl font-bold gradient-text hover:scale-105 transition-transform"
+            className="text-2xl font-light gradient-text hover:scale-105 transition-transform"
           >
-            Timbre
+            timbre
           </Link>
         </div>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
-          <button
-            onClick={() => scrollToSection('features')}
-            className="text-gray-300 hover:text-white transition-colors hover:scale-105 transform duration-200"
-          >
-            Features
-          </button>
-          <button
-            onClick={() => scrollToSection('how-it-works')}
-            className="text-gray-300 hover:text-white transition-colors hover:scale-105 transform duration-200"
-          >
-            How It Works
-          </button>
+          {/* Links removed as per request */}
         </div>
 
         {/* Desktop CTA Buttons */}
@@ -110,24 +98,12 @@ export function Navigation() {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden transition-all duration-300 overflow-hidden ${
-          isMobileMenuOpen ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'
-        }`}
+        className={`md:hidden transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'
+          }`}
       >
-        <div className="bg-black/90 backdrop-blur-md rounded-2xl border border-white/10 p-6 space-y-4">
-          <button
-            onClick={() => scrollToSection('features')}
-            className="block w-full text-left text-gray-300 hover:text-white transition-colors py-2"
-          >
-            Features
-          </button>
-          <button
-            onClick={() => scrollToSection('how-it-works')}
-            className="block w-full text-left text-gray-300 hover:text-white transition-colors py-2"
-          >
-            How It Works
-          </button>
-          <div className="pt-4 border-t border-white/10 space-y-3">
+        <div className="bg-background-secondary/90 backdrop-blur-md rounded-2xl border border-white/5 p-6 space-y-4">
+          {/* Links removed as per request */}
+          <div className="pt-4 border-t border-white/5 space-y-3">
             <Link href="/auth/login" className="block">
               <GradientButton variant="ghost" size="sm" className="w-full">
                 Sign In
