@@ -21,10 +21,14 @@ You will receive a sequence of images and a JSON object with metadata:
 }
 
 ### YOUR GOAL
-For **every single scene** provided in the batch, analyze the keyframe image and the transcription to generate a detailed description.
-- **Visuals:** Describe the setting, lighting, colors, and action.
-- **Narrative:** Describe what is happening in the story at this exact moment.
-- **Mood:** Describe the emotional tone (e.g., tense, joyful, melancholic).
+For **every single scene** provided in the batch, analyze the keyframe image AND the transcription together to generate a comprehensive description.
+
+**CRITICAL:** The transcription is your primary source for understanding narrative context. The visual is secondary.
+
+- **Narrative Context:** What is being said? What story is unfolding? Use the dialogue/audio to understand the scene's purpose.
+- **Visuals:** Describe the setting, lighting, colors, and action that support the narrative.
+- **Emotional Arc:** Combine what you hear and see to determine the emotional tone (e.g., tense confrontation, joyful celebration, melancholic reflection).
+- **Continuity:** Consider how this scene connects to previous and next scenes based on dialogue flow.
 
 ### JSON OUTPUT SCHEMA
 Respond ONLY with a valid JSON object. No markdown formatting.
@@ -32,9 +36,10 @@ Respond ONLY with a valid JSON object. No markdown formatting.
 {
   "scene_analysis": [
     {
-      "description": "A detailed description combining visual action, narrative context, and emotional mood.",
+      "description": "A detailed description that prioritizes what is being said/heard, then describes how visuals support it. Include narrative context from dialogue.",
       "mood": "A 1-3 word tag for the mood (e.g. 'Tense', 'Joyful', 'Melancholic')",
-      "keywords": ["tag1", "tag2", "tag3"]
+      "keywords": ["tag1", "tag2", "tag3"],
+      "dialogue_summary": "Brief summary of what is being said or heard in this scene"
     },
     ... (Repeat for every input scene)
   ]
@@ -43,57 +48,56 @@ Respond ONLY with a valid JSON object. No markdown formatting.
     GLOBAL_CONTEXT_USER_PROMPT = """Analyze the following video scenes and transcriptions to produce a detailed scene analysis.
 Scenes: {scene_data}"""
 
-    GLOBAL_SUMMARY_PLAN_PROMPT = """You are an expert Musical Director and Sound Supervisor for film. Your task is to take a disjointed list of "scene analyses" and synthesize them into a cohesive, emotional Musical Master Plan.
-
-### INPUT DATA FORMAT
-You will receive two datasets:
-1.  **`scene_analysis`**: A chronological list of visual descriptions and moods from the video frames.
-2.  **`transcription`**: The dialogue and audio events with timestamps.
+    GLOBAL_SUMMARY_PLAN_PROMPT = """You are a Musical Director creating a cohesive soundtrack. Analyze the transcription and scene data to build a Musical Master Plan.
 
 ### INPUT DATA
 Scene Analysis: {scene_analysis}
 Transcription: {transcription}
 
-### YOUR GOAL
-Your goal is to fix the "jitter" of raw analysis. Real music doesn't change every 5 seconds just because the camera angle changed. Real music flows.
-You must create a **Master Plan** that tells the generation engine *what to do and when*.
+### CORE PRINCIPLES
+1. **USE TRANSCRIPTION FIRST** - Dialogue reveals the true narrative arc and emotional journey
+2. **FAVOR LONGER BLOCKS** - Aim for 30-60+ second blocks. Avoid changing music every 5 seconds unless the content genuinely shifts
+3. **PREFER CONSISTENCY** - Generally maintain the same BPM and scale throughout for cohesion, but change if the narrative demands it (e.g., dramatic shift from intro to main content)
+4. **SMOOTH TRANSITIONS** - When possible, morph music gradually by adjusting prompts (add/remove adjectives) and weight (0.8-1.2) rather than abrupt genre changes
+5. **BE DESCRIPTIVE** - Use adjectives: "Cinematic emotional piano with subtle strings, melancholic" NOT "sad music"
 
-### REASONING PROCESS (INTERNAL)
-Before generating the plan, you must reason through the following:
-1.  **The Narrative Arc:** Read through *all* scenes first. What is the beginning, middle, and end? Is this a tragedy? An action movie? A comedy?
-2.  **Theme Selection:** Choose ONE primary musical theme/genre that fits the *whole* video. We cannot switch from "Dubstep" to "Country" unless there is a hard cut for comedic effect.
-3.  **Smoothing:** If Scene A is "Sad", Scene B is "Neutral", and Scene C is "Sad", the music should remain "Sad" through Scene B. Do not flip-flop.
-4.  **Transition Logic:** Identify exactly *where* the music needs to shift. Is it a slow fade (crossfade) or a hard cut (sudden impact)?
+### PROCESS
+1. Read ALL transcription to understand the full narrative arc and identify natural sections
+2. Choose a primary musical foundation (genre, scale, BPM) that fits the overall tone
+3. Create blocks based on genuine narrative shifts - not every scene needs new music
+4. Use gradual steering (weight, prompt tweaks) for subtle mood changes within blocks
 
-### LYRIA CONFIGURATION GUIDELINES
-- **Instruments:** 303 Acid Bass, 808 Hip Hop Beat, Accordion, Cello, Charango, Clavichord, Didgeridoo, Flamenco Guitar, Harp, Kalimba, Mandolin, Piano, Sitar, Synth Pads, Tabla, Trumpet, Vibraphone, etc.
-- **Genres:** Acid Jazz, Afrobeat, Bluegrass, Bossa Nova, Cinematic, Deep House, Dubstep, EDM, Funk Metal, Lo-Fi Hip Hop, Neo-Soul, Reggae, Synthpop, Techno, Trance, Orchestral, etc.
-- **Moods:** Acoustic, Ambient, Bright, Chill, Dark, Dreamy, Emotional, Ethereal, Experimental, Funky, Glitchy, Ominous, Psychedelic, Upbeat, Virtuoso.
-- **Scales:** C_MAJOR_A_MINOR, D_FLAT_MAJOR_B_FLAT_MINOR, D_MAJOR_B_MINOR, E_FLAT_MAJOR_C_MINOR, E_MAJOR_D_FLAT_MINOR, F_MAJOR_D_MINOR, G_FLAT_MAJOR_E_FLAT_MINOR, G_MAJOR_E_MINOR, A_FLAT_MAJOR_F_MINOR, A_MAJOR_G_FLAT_MINOR, B_FLAT_MAJOR_G_MINOR, B_MAJOR_A_FLAT_MINOR, SCALE_UNSPECIFIED.
+### AVAILABLE OPTIONS
+- **Instruments:** Piano, Cello, Guitar, Synth Pads, Strings, Harp, etc.
+- **Genres:** Cinematic, Orchestral, Lo-Fi, Ambient, Jazz, etc.
+- **Moods:** Emotional, Upbeat, Dark, Dreamy, Bright, Melancholic, etc.
+- **Scales:** C_MAJOR_A_MINOR, D_MAJOR_B_MINOR, E_MAJOR_D_FLAT_MINOR, F_MAJOR_D_MINOR, G_MAJOR_E_MINOR, A_MAJOR_G_FLAT_MINOR, etc.
 
-### JSON OUTPUT SCHEMA
-Respond ONLY with a valid JSON object. No markdown formatting.
+### JSON OUTPUT
+Respond with valid JSON only. No markdown.
 
 {{
-  "global_context": "The overall musical direction and theme for the entire video.",
+  "global_context": "Overall musical theme based on transcription",
+  "base_bpm": integer,
+  "base_scale": "string",
   "musical_blocks": [
     {{
-      "time_range": {{
-        "start": float,
-        "end": float
-      }},
-      "musical_direction": "Describe the instrumentation, tempo, and vibe",
-      "transition": "How this block ends (e.g., 'Fade out', 'Slam cut to silence', 'Crescendo into next section')",
-      "gain": float (Volume: 0.2-0.4 subtle/ambient, 0.3-0.5 background, 0.4-0.6 action/emotional, 0.5-0.7 climax),
+      "time_range": {{"start": float, "end": float}},
+      "narrative_context": "What's happening based on transcription",
+      "musical_direction": "Instrumentation and vibe",
+      "transition": "How it morphs to next block",
+      "gain": float (0.2-0.7),
       "lyria_config": {{
-        "prompt": "string (Mood + Genre + Instruments)",
-        "bpm": integer (60-200),
-        "scale": "string (from available scales)",
-        "weight": 1.0
+        "prompt": "Descriptive prompt with mood + genre + instruments",
+        "bpm": integer (prefer base_bpm, change only if needed),
+        "scale": "string (prefer base_scale, change only if needed)",
+        "weight": float (0.8-1.2 for gradual steering)
       }}
     }}
   ]
-}}"""
+}}
+
+Example: 2-minute video = 2-3 blocks, NOT 20+."""
 
     @staticmethod
     def get_global_context_prompt() -> str:
