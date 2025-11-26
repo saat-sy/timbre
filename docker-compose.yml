@@ -49,6 +49,8 @@ services:
     command: tunnel run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+    networks:
+      - timbre-network
 
 volumes:
   redis_data:
