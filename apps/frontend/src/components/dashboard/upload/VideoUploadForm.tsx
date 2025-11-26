@@ -255,9 +255,6 @@ export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
                   disabled={isProcessing}
                   showUploadButton={false}
                 />
-                <div className="mt-8 text-center">
-                  <p className="text-white/30 text-sm font-light">Supported formats: MP4, MOV, WEBM • Max size: 100MB</p>
-                </div>
               </div>
             )}
 
