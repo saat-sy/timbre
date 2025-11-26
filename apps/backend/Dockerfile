@@ -4,8 +4,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    libgl1 \
+    libglx-mesa0 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -14,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     portaudio19-dev \
     ffmpeg \
     curl \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Use cache mount to speed up installation
