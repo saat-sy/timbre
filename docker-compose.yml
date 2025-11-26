@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: timbre-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - timbre-network
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: timbre-backend
+    ports:
+      - "80:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - REDIS_SESSION_TTL=3600
+      - HOST=0.0.0.0
+      - PORT=8000
+      - CORS_ORIGINS=*
+      - MAX_FILE_SIZE=52428800
+    env_file:
+      - ./apps/backend/.env
+    volumes:
+      - ./apps/backend/logs:/app/logs
+      - ./apps/backend/test_output:/app/test_output
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - timbre-network
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  timbre-network:
+    driver: bridge
