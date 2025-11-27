@@ -78,14 +78,14 @@ export function TopContextBar({ context, currentTime }: MusicalContextDisplayPro
     return (
         <div className="relative max-w-4xl mx-auto group/theme">
             <style>{animationStyles}</style>
-            
+
             {/* Collapsed State */}
-            <div className="bg-gradient-to-r from-black/70 via-black/60 to-black/70 backdrop-blur-xl border border-white/10 rounded-xl px-5 py-2.5 flex items-center justify-center shadow-xl relative overflow-hidden cursor-pointer">
+            <div className="bg-gradient-to-r from-black/70 via-black/60 to-black/70 backdrop-blur-xl border border-white/10 rounded-xl px-4 py-2 md:px-5 md:py-2.5 flex items-center justify-center shadow-xl relative overflow-hidden cursor-pointer">
                 {/* Animated Background Accent */}
                 <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/5 via-accent-secondary/5 to-accent-primary/5 opacity-50 group-hover/theme:opacity-70 transition-opacity" />
-                
+
                 {/* Content */}
-                <div className="flex items-center gap-4 relative z-10 w-full">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 relative z-10 w-full">
                     <div className="flex items-center gap-2 shrink-0 self-start mt-0.5">
                         <div className="relative">
                             <div className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse shadow-[0_0_10px_rgba(255,85,0,0.8)]" />
@@ -93,18 +93,18 @@ export function TopContextBar({ context, currentTime }: MusicalContextDisplayPro
                         </div>
                         <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">Global Theme</span>
                     </div>
-                    <p className="text-white text-sm font-light tracking-wide leading-snug line-clamp-1">
+                    <p className="text-white text-xs md:text-sm font-light tracking-wide leading-snug line-clamp-1">
                         {context.data.master_plan.global_context}
                     </p>
                 </div>
             </div>
 
             {/* Expanded Overlay on Hover */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] max-w-5xl opacity-0 group-hover/theme:opacity-100 pointer-events-none group-hover/theme:pointer-events-auto transition-opacity duration-300 z-50">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90vw] md:w-[120%] max-w-5xl opacity-0 group-hover/theme:opacity-100 pointer-events-none group-hover/theme:pointer-events-auto transition-opacity duration-300 z-50">
                 <div className="bg-gradient-to-r from-black/90 via-black/85 to-black/90 backdrop-blur-xl border border-white/20 rounded-xl px-6 py-4 shadow-2xl">
                     {/* Animated Background Accent */}
                     <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/10 via-accent-secondary/10 to-accent-primary/10 opacity-70 rounded-xl" />
-                    
+
                     {/* Content */}
                     <div className="flex items-start gap-4 relative z-10">
                         <div className="flex items-center gap-2 shrink-0 mt-0.5">
@@ -114,7 +114,7 @@ export function TopContextBar({ context, currentTime }: MusicalContextDisplayPro
                             </div>
                             <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/50">Global Theme</span>
                         </div>
-                        <p className="text-white text-sm font-light tracking-wide leading-relaxed flex-1">
+                        <p className="text-white text-xs md:text-sm font-light tracking-wide leading-relaxed flex-1">
                             {context.data.master_plan.global_context}
                         </p>
                     </div>
@@ -130,13 +130,13 @@ export function MusicalBlockBar({ context, currentTime }: MusicalContextDisplayP
     if (!context) return null;
 
     return (
-        <div className="w-full max-w-5xl mx-auto bg-gradient-to-br from-black/80 via-black/70 to-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl relative overflow-hidden">
+        <div className="w-full max-w-full md:max-w-5xl mx-auto bg-gradient-to-br from-black/80 via-black/70 to-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl relative overflow-hidden">
             {/* Subtle animated gradient background */}
             <div className="absolute inset-0 bg-gradient-to-r from-accent-primary/5 via-transparent to-accent-secondary/5 opacity-50" />
-            
+
             <div className="relative z-10 p-4">
                 {/* Main Content Row */}
-                <div className="flex items-center gap-5">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 md:gap-5">
 
                     {/* Musical Direction - Main Focus */}
                     <div className="flex-1 min-w-0">
@@ -148,20 +148,20 @@ export function MusicalBlockBar({ context, currentTime }: MusicalContextDisplayP
                                     </svg>
                                     <span className="text-[8px] font-bold uppercase tracking-wider text-accent-secondary/80">Musical Direction</span>
                                 </div>
-                                <div key={currentBlock.musical_direction} className="animate-slideFade text-xl font-bold text-white tracking-wide leading-tight">
+                                <div key={currentBlock.musical_direction} className="animate-slideFade text-lg md:text-xl font-bold text-white tracking-wide leading-tight">
                                     {currentBlock.musical_direction}
                                 </div>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2.5 text-white/20 py-2">
                                 <div className="w-4 h-4 border-2 border-white/20 border-t-white/40 rounded-full animate-spin" />
-                                <span className="text-sm font-medium">Waiting for musical cues...</span>
+                                <span className="text-xs md:text-sm font-medium">Waiting for musical cues...</span>
                             </div>
                         )}
                     </div>
 
                     {/* Divider */}
-                    <div className="h-12 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+                    <div className="hidden md:block h-12 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
 
                     {/* Time Range */}
                     {currentBlock && (
@@ -174,21 +174,21 @@ export function MusicalBlockBar({ context, currentTime }: MusicalContextDisplayP
                     )}
 
                     {/* Divider */}
-                    <div className="h-12 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+                    <div className="hidden md:block h-12 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
 
                     {/* Metrics */}
-                    <div className="flex gap-3 shrink-0">
+                    <div className="flex flex-wrap gap-3 justify-between md:justify-start shrink-0">
                         {currentBlock ? (
                             <>
                                 <div className="flex flex-col items-center bg-gradient-to-br from-accent-primary/10 to-accent-primary/5 rounded-lg px-4 py-2 border border-accent-primary/20 min-w-[75px]">
                                     <span className="text-[8px] font-bold uppercase tracking-wider text-accent-primary/60 mb-1">BPM</span>
-                                    <div key={currentBlock.lyria_config.bpm} className="animate-slideFade text-2xl font-bold text-accent-primary tabular-nums">
+                                    <div key={currentBlock.lyria_config.bpm} className="animate-slideFade text-xl md:text-2xl font-bold text-accent-primary tabular-nums">
                                         {currentBlock.lyria_config.bpm}
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-center bg-gradient-to-br from-accent-secondary/10 to-accent-secondary/5 rounded-lg px-4 py-2 border border-accent-secondary/20 min-w-[95px]">
                                     <span className="text-[8px] font-bold uppercase tracking-wider text-accent-secondary/60 mb-1">Scale</span>
-                                    <div key={currentBlock.lyria_config.scale} className="animate-slideFade text-sm font-bold text-accent-secondary truncate max-w-full">
+                                    <div key={currentBlock.lyria_config.scale} className="animate-slideFade text-xs md:text-sm font-bold text-accent-secondary truncate max-w-full">
                                         {currentBlock.lyria_config.scale.replace(/_/g, ' ')}
                                     </div>
                                 </div>
@@ -229,11 +229,10 @@ export function MusicalBlockBar({ context, currentTime }: MusicalContextDisplayP
                             return (
                                 <div
                                     key={idx}
-                                    className={`flex-1 rounded-full transition-all duration-500 ${
-                                        isActive 
-                                            ? 'bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary shadow-[0_0_12px_rgba(255,85,0,0.8)] scale-y-150' 
-                                            : 'bg-white/20 hover:bg-white/30'
-                                    }`}
+                                    className={`flex-1 rounded-full transition-all duration-500 ${isActive
+                                        ? 'bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary shadow-[0_0_12px_rgba(255,85,0,0.8)] scale-y-150'
+                                        : 'bg-white/20 hover:bg-white/30'
+                                        }`}
                                 />
                             );
                         })}
