@@ -7,11 +7,12 @@ import { InlineError, useErrorState } from '../../ui/error-banner';
 interface SimpleVideoUploadProps {
   onSubmit?: (
     file: File,
-    onProgress?: (step: 'uploading' | 'scheduling' | null) => void
+    onProgress?: (step: 'uploading' | 'composing' | null) => void
   ) => Promise<void>;
+  loadingStep?: 'uploading' | 'composing' | null;
 }
 
-export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
+export function VideoUploadForm({ onSubmit, loadingStep }: SimpleVideoUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -114,7 +115,9 @@ export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
       setIsProcessing(true);
 
       try {
-        await onSubmit(selectedFile);
+        await onSubmit(selectedFile, (step) => {
+          // Progress callback handled by parent
+        });
 
         setSelectedFile(null);
         setVideoThumbnail(null);
@@ -197,18 +200,26 @@ export function VideoUploadForm({ onSubmit }: SimpleVideoUploadProps) {
                     )}
 
                     {/* Processing State Overlay */}
-                    {isProcessing && (
+                    {(isProcessing || loadingStep) && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <div className="relative w-20 h-20 mb-4">
                           <div className="absolute inset-0 border-4 border-white/10 rounded-full"></div>
                           <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                            </svg>
+                            {loadingStep === 'uploading' ? (
+                              <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                            ) : (
+                              <svg className="w-8 h-8 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                              </svg>
+                            )}
                           </div>
                         </div>
-                        <span className="text-lg font-light text-white tracking-widest uppercase animate-pulse">Composing...</span>
+                        <span className="text-lg font-light text-white tracking-widest uppercase animate-pulse">
+                          {loadingStep === 'uploading' ? 'Uploading...' : 'Composing...'}
+                        </span>
                       </div>
                     )}
                   </div>

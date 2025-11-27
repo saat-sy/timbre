@@ -12,7 +12,7 @@ export function UploadPage() {
   const { error, isRetryable, showError, clearError } = useErrorState();
   const { handleUploadError, isRetryable: checkRetryable } = useErrorHandler();
   const [loadingStep, setLoadingStep] = useState<
-    'uploading' | 'scheduling' | null
+    'uploading' | 'composing' | null
   >(null);
 
   // Store last submission for retry
@@ -20,7 +20,7 @@ export function UploadPage() {
 
   const handleSubmit = async (
     file: File,
-    onProgress?: (step: 'uploading' | 'scheduling' | null) => void
+    onProgress?: (step: 'uploading' | 'composing' | null) => void
   ) => {
     clearError();
     lastSubmission = { file };
@@ -50,6 +50,10 @@ export function UploadPage() {
       if (!response.ok) {
         throw new Error('Upload failed');
       }
+
+      // Switch to composing state after upload completes
+      setLoadingStep('composing');
+      onProgress?.('composing');
 
       const data = await response.json();
       const sessionId = data.session_id;
@@ -108,7 +112,7 @@ export function UploadPage() {
 
       {/* Centered Upload Interface - full remaining height */}
       <div className="h-full">
-        <VideoUploadForm onSubmit={handleSubmit} />
+        <VideoUploadForm onSubmit={handleSubmit} loadingStep={loadingStep} />
       </div>
     </div>
   );
