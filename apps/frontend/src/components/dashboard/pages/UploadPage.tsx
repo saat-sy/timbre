@@ -11,23 +11,17 @@ export function UploadPage() {
   const router = useRouter();
   const { error, isRetryable, showError, clearError } = useErrorState();
   const { handleUploadError, isRetryable: checkRetryable } = useErrorHandler();
-  const [loadingStep, setLoadingStep] = useState<
-    'uploading' | 'composing' | null
-  >(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Store last submission for retry
   let lastSubmission: { file: File } | null = null;
 
-  const handleSubmit = async (
-    file: File,
-    onProgress?: (step: 'uploading' | 'composing' | null) => void
-  ) => {
+  const handleSubmit = async (file: File) => {
     clearError();
     lastSubmission = { file };
 
     try {
-      setLoadingStep('uploading');
-      onProgress?.('uploading');
+      setIsLoading(true);
 
       // Call REST API endpoint
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -51,10 +45,6 @@ export function UploadPage() {
         throw new Error('Upload failed');
       }
 
-      // Switch to composing state after upload completes
-      setLoadingStep('composing');
-      onProgress?.('composing');
-
       const data = await response.json();
       const sessionId = data.session_id;
 
@@ -68,16 +58,14 @@ export function UploadPage() {
         })
       );
 
-      setLoadingStep(null);
-      onProgress?.(null);
+      setIsLoading(false);
       clearError();
       lastSubmission = null;
 
       // Navigate to the video player page
       router.push(`/dashboard/${sessionId}`);
     } catch (err) {
-      setLoadingStep(null);
-      onProgress?.(null);
+      setIsLoading(false);
       const errorMessage = handleUploadError(err);
       const canRetry = checkRetryable(err);
       showError(errorMessage, canRetry);
@@ -112,7 +100,7 @@ export function UploadPage() {
 
       {/* Centered Upload Interface - full remaining height */}
       <div className="h-full">
-        <VideoUploadForm onSubmit={handleSubmit} loadingStep={loadingStep} />
+        <VideoUploadForm onSubmit={handleSubmit} isLoading={isLoading} />
       </div>
     </div>
   );
