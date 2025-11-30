@@ -264,6 +264,11 @@ class VideoUtils:
         logger.info("Extracting scenes from video")
         scene_list = detect(self.temp_video_path, ContentDetector())
         self.scenes = []
+        if not scene_list:
+            cap = cv2.VideoCapture(self.temp_video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.scenes.append((0.0, total_frames / fps))
         for scene_start, scene_end in scene_list:
             self.scenes.append((scene_start.get_seconds(), scene_end.get_seconds()))
         logger.info(f"Detected {len(self.scenes)} scenes in the video")
