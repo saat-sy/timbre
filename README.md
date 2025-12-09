@@ -161,9 +161,24 @@ pnpm dev
 
 ## 🗺️ Roadmap
 
+### **Core Features**
 - [ ] **Export mode** - Export an MP4 file with background music
 - [ ] **Advanced scene detection** - More advanced emotion detection to understand the scene in depth
 - [ ] **Multi-character emotional arcs** - Track and score individual character journeys
+
+### **DevOps & Production**
+- [ ] **CI/CD Pipeline** - GitHub Actions for automated testing and deployment
+- [ ] **Production deployment** - Live staging and production environments
+- [ ] **Monitoring & observability** - Error tracking, performance metrics, and alerting
+- [ ] **Load testing** - Performance validation under high concurrent usage
+- [ ] **Rate limiting** - DDoS protection and API throttling
+
+### **Testing & Quality**
+- [ ] **Frontend test suite** - React component and integration testing
+- [ ] **Backend test expansion** - Increased unit test coverage and API testing
+- [ ] **End-to-end tests** - Full user workflow automation
+- [ ] **Security scanning** - Automated vulnerability detection
+- [ ] **Performance benchmarking** - Latency and throughput optimization
 
 ---
 
