@@ -1,0 +1,28 @@
+{
+  "name": "@repo/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "uv sync",
+    "dev": "uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "prestart": "uv sync",
+    "start": "uv run uvicorn main:app --host 0.0.0.0 --port 8000",
+    "pretest": "uv sync",
+    "test": "uv run pytest",
+    "test:watch": "uv run pytest --watch",
+    "test:cov": "uv run pytest --cov=. --cov-report=html --cov-report=term",
+    "prelint": "uv sync",
+    "lint": "uv run black --check .",
+    "lint:fix": "uv run black .",
+    "check-types": "echo 'Type checking skipped for Python backend'",
+    "clean": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true",
+    "install:python": "uv sync",
+    "install:deps": "uv add",
+    "install:dev": "uv add --dev"
+  },
+  "engines": {
+    "node": ">=18",
+    "python": ">=3.13",
+    "uv": ">=0.1.0"
+  }
+}
