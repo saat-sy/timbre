@@ -10,12 +10,39 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "lint:fix": {
+      "cache": false
+    },
     "check-types": {
       "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "**/*.py", "**/*.ts", "**/*.tsx"],
+      "outputs": ["coverage/**", ".coverage", "htmlcov/**"]
+    },
+    "test:cov": {
+      "inputs": ["$TURBO_DEFAULT$", "**/*.py", "**/*.ts", "**/*.tsx"],
+      "outputs": ["coverage/**", ".coverage", "htmlcov/**"]
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {
+      "cache": false
+    },
+    "install:python": {
+      "cache": false
+    },
+    "install:deps": {
+      "cache": false
+    },
+    "install:dev": {
+      "cache": false
     }
   }
 }

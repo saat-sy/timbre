@@ -89,6 +89,7 @@ Timbre is a multimodal, adaptive scoring engine that creates real-time, context-
 - **Docker Compose** - Containerized development environment
 - **Turborepo** - Monorepo build system and caching
 - **pnpm** - Fast, disk space efficient package manager
+- **UV** - Ultra-fast Python package installer and resolver
 
 ---
 
@@ -127,7 +128,7 @@ timbre/
 ### **Prerequisites**
 - Docker & Docker Compose
 - Node.js 18+ and pnpm
-- Python 3.13+
+- Python 3.13+ and uv
 - Google Cloud Project with Lyria API access
 
 ### **Quick Start**
@@ -136,7 +137,7 @@ timbre/
 git clone https://github.com/saat-sy/timbre.git
 cd timbre
 
-# Install dependencies
+# Install Node.js dependencies
 pnpm install
 
 # Set up environment variables
@@ -147,7 +148,7 @@ cp apps/frontend/.env.example apps/frontend/.env
 # Start the development environment
 docker-compose up -d
 
-# Run the applications
+# Run both frontend and backend
 pnpm dev
 ```
 

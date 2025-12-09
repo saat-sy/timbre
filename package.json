@@ -4,9 +4,17 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "start": "turbo run start",
     "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
+    "test:cov": "turbo run test:cov",
+    "check-types": "turbo run check-types",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "clean": "turbo run clean",
+    "install:python": "turbo run install:python",
+    "install:deps": "turbo run install:deps",
+    "install:dev": "turbo run install:dev"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
