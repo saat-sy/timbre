@@ -1,4 +1,4 @@
-# 🎵 Timbre - Real-Time AI Music Generation for Videos
+# Timbre - Real-Time AI Music Generation for Videos
 Create adaptive cinematic soundtracks powered by Google Lyria.
 
 [![Built with FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
